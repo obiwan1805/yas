@@ -51,16 +51,12 @@ jobs:
       #   with:
       #     args: --file={{SERVICE_NAME}}/pom.xml --severity-threshold=high
       - name: Install Snyk CLI
-        uses: snyk/actions/setup@master
-      - name: Debug Maven dependency tree
-        run: mvn dependency:tree -DoutputType=dot --batch-mode --non-recursive --file={{SERVICE_NAME}}/pom.xml
-        continue-on-error: true
+        run: npm install -g snyk
       - name: Snyk Scan
-        run: snyk test --file={{SERVICE_NAME}}/pom.xml --severity-threshold=high
+        run: snyk test --file={{SERVICE_NAME}}/pom.xml --severity-threshold=high -- -Drevision=1.0-SNAPSHOT
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3

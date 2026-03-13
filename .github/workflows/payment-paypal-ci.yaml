@@ -76,18 +76,8 @@ jobs:
           update-comment: true
       - name: Install Snyk CLI
         run: npm install -g snyk
-      - name: Debug environment
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-          mvn --version
-          which mvn
-          snyk --version
-      - name: Debug Maven dependency tree
-        run: mvn dependency:tree -DoutputType=dot --batch-mode --non-recursive --file=payment-paypal/pom.xml
-        continue-on-error: true
       - name: Snyk Scan
-        run: snyk test -d --file=payment-paypal/pom.xml --severity-threshold=high
+        run: snyk test --file=payment-paypal/pom.xml --severity-threshold=high -- -Drevision=1.0-SNAPSHOT
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
