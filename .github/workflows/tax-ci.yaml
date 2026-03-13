@@ -74,13 +74,13 @@ jobs:
           min-coverage-changed-files: 60
           title: 'Tax Coverage Report'
           update-comment: true
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/maven@master
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+      - name: Snyk Scan
+        run: snyk test --file=tax/pom.xml --severity-threshold=high
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --file=tax/pom.xml --severity-threshold=high
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
