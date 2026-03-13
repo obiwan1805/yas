@@ -60,7 +60,7 @@ jobs:
       - name: Install Snyk CLI
         uses: snyk/actions/setup@master
       - name: Snyk Scan
-        run: snyk test --file=pom.xml --severity-threshold=high -- -pl sampledata
+        run: snyk test --file=sampledata/pom.xml --severity-threshold=high
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
