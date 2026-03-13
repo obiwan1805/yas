@@ -75,7 +75,14 @@ jobs:
           title: 'Payment Paypal Coverage Report'
           update-comment: true
       - name: Install Snyk CLI
-        uses: snyk/actions/setup@master
+        run: npm install -g snyk
+      - name: Debug environment
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          mvn --version
+          which mvn
+          snyk --version
       - name: Debug Maven dependency tree
         run: mvn dependency:tree -DoutputType=dot --batch-mode --non-recursive --file=payment-paypal/pom.xml
         continue-on-error: true
@@ -84,7 +91,6 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
