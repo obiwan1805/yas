@@ -27,8 +27,14 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
-      - name: Run Maven Build Command
-        run: mvn clean install -pl location -am
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - name: Build location module
+        run: mvn -B clean install -pl location -am
       - name: Run Maven Checkstyle
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         run: mvn checkstyle:checkstyle -pl location -am -Dcheckstyle.output.file=location-checkstyle-result.xml
@@ -74,6 +80,13 @@ jobs:
           min-coverage-changed-files: 60
           title: 'Location Coverage Report'
           update-comment: true
+      - name: Install Snyk
+        run: npm install -g snyk
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+      - name: Snyk Scan
+        continue-on-error: true
+        run: snyk test --org=dungx2409 --maven-aggregate-project --severity-threshold=high
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
@@ -88,3 +101,12 @@ jobs:
           context: ./location
           push: true
           tags: ghcr.io/obiwan1805/yas-location:latest
+
+
+
+
+
+
+
+
+
