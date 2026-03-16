@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.Buckets;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import com.yas.search.constant.enums.SortType;
@@ -214,6 +215,8 @@ class ProductServiceTest {
             mock(org.springframework.data.elasticsearch.client.elc.Aggregation.class);
         Aggregate aggregate = mock(Aggregate.class);
         StringTermsAggregate stringTermsAggregate = mock(StringTermsAggregate.class);
+        @SuppressWarnings("unchecked")
+        Buckets<StringTermsBucket> buckets = mock(Buckets.class);
         StringTermsBucket stringTermsBucket = mock(StringTermsBucket.class);
         FieldValue fieldValue = mock(FieldValue.class);
 
@@ -224,7 +227,8 @@ class ProductServiceTest {
         when(springAggregation.getName()).thenReturn("categories");
         when(springAggregation.getAggregate()).thenReturn(aggregate);
         when(aggregate._get()).thenReturn(stringTermsAggregate);
-        when(stringTermsAggregate.buckets()._get()).thenReturn(List.of(stringTermsBucket));
+        when(stringTermsAggregate.buckets()).thenReturn(buckets);
+        when(buckets._get()).thenReturn(List.of(stringTermsBucket));
         when(stringTermsBucket.key()).thenReturn(fieldValue);
         when(fieldValue._get()).thenReturn("Electronics");
         when(stringTermsBucket.docCount()).thenReturn(3L);
