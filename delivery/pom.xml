@@ -16,9 +16,9 @@
     <description>YAS Delivery service</description>
 
     <properties>
-        <sonar.organization>nashtech-garage</sonar.organization>
+        <sonar.organization>obiwan1805</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.projectKey>nashtech-garage_yas-delivery</sonar.projectKey>
+        <sonar.projectKey>obiwan1805_yas-delivery</sonar.projectKey>
     </properties>
 
 </project>
