@@ -64,7 +64,7 @@ jobs:
           paths: ${{github.workspace}}/storefront-bff/target/site/jacoco/jacoco.xml
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
-          min-coverage-changed-files: 60
+          min-coverage-changed-files: 70
           title: 'Storefront BFF Coverage Report'
           update-comment: true
       - name: Log in to the Container registry
