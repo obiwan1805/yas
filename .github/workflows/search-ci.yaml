@@ -1,5 +1,5 @@
 name: search service ci
-
+##
 on:
   push:
     branches: ["main"]
@@ -19,7 +19,7 @@ on:
 
 jobs:
   Build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       FROM_ORIGINAL_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name == github.repository || github.ref == 'refs/heads/main' }}
     steps:
