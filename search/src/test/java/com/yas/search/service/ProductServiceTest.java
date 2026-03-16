@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,8 @@ import static org.mockito.Mockito.when;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import com.yas.search.constant.enums.SortType;
 import com.yas.search.model.Product;
 import com.yas.search.model.ProductCriteriaDto;
@@ -215,7 +218,7 @@ class ProductServiceTest {
         FieldValue fieldValue = mock(FieldValue.class);
 
         when(searchHits.hasAggregations()).thenReturn(true);
-        when(searchHits.getAggregations()).thenReturn(aggregationsContainer);
+        doReturn(aggregationsContainer).when(searchHits).getAggregations();
         when(aggregationsContainer.aggregations()).thenReturn(List.of(elasticsearchAggregation));
         when(elasticsearchAggregation.aggregation()).thenReturn(springAggregation);
         when(springAggregation.getName()).thenReturn("categories");
