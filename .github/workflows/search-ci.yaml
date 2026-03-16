@@ -36,14 +36,17 @@ jobs:
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: jwgmeligmeyling/checkstyle-github-action@master
         with:
-          path: '**/search-checkstyle-result.xml'
+          path: "**/search-checkstyle-result.xml"
       - name: Test Results
         uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) && hashFiles('search/**/surefire-reports/TEST-*.xml', 'search/**/failsafe-reports/TEST-*.xml') != '' }}
         with:
           name: Search-Service-Unit-Test-Results
-          path: "search/**/*-reports/TEST*.xml"
+          path: |
+            search/**/surefire-reports/TEST-*.xml
+            search/**/failsafe-reports/TEST-*.xml
           reporter: java-junit
+          fail-on-error: false
       # - name: Analyze with sonar cloud
       #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
       #   env:
@@ -55,9 +58,9 @@ jobs:
         env:
           JAVA_HOME: /opt/jdk
         with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
+          project: "yas"
+          path: "."
+          format: "HTML"
       - name: Upload OWASP Dependency Check results
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: actions/upload-artifact@master
@@ -72,7 +75,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 80
           min-coverage-changed-files: 60
-          title: 'Search Coverage Report'
+          title: "Search Coverage Report"
           update-comment: true
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
