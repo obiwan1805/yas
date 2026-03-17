@@ -65,7 +65,8 @@ jobs:
           name: OWASP Dependency Check Report
           path: ${{github.workspace}}/reports
       - name: Add coverage report to PR
-        uses: madrapps/jacoco-report@v1.6.1
+        id: jacoco
+        uses: madrapps/jacoco-report@v1.7.2
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         with:
           paths: ${{github.workspace}}/payment/target/site/jacoco/jacoco.xml
@@ -74,6 +75,32 @@ jobs:
           min-coverage-changed-files: 70
           title: 'Payment Coverage Report'
           update-comment: true
+          continue-on-error: false
+      - name: Enforce coverage gate (>= 70%)
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        uses: actions/github-script@v7
+        env:
+          COVERAGE_OVERALL: ${{ steps.jacoco.outputs.coverage-overall }}
+          COVERAGE_CHANGED: ${{ steps.jacoco.outputs.coverage-changed-files }}
+        with:
+          script: |
+            const min = 70;
+            const overall = Number.parseFloat(process.env.COVERAGE_OVERALL ?? 'NaN');
+            const changed = Number.parseFloat(process.env.COVERAGE_CHANGED ?? 'NaN');
+
+            if (Number.isNaN(overall) || Number.isNaN(changed)) {
+              core.setFailed(
+                `Cannot read JaCoCo outputs: overall='${process.env.COVERAGE_OVERALL}', changed='${process.env.COVERAGE_CHANGED}'`
+              );
+            } else if (overall < min || changed < min) {
+              core.setFailed(
+                `Coverage gate failed. overall=${overall}%, changed-files=${changed}%, required>=${min}%`
+              );
+            } else {
+              core.info(
+                `Coverage gate passed. overall=${overall}%, changed-files=${changed}%`
+              );
+            }
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
