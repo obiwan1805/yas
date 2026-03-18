@@ -125,7 +125,7 @@ class PaymentServiceTest {
             .paymentFee(BigDecimal.valueOf(500))
             .gatewayTransactionId("gatewayId")
             .paymentMethod(PaymentMethod.BANKING)
-            .paymentStatus(PaymentStatus.FAILED)
+                .paymentStatus(PaymentStatus.CANCELLED)
             .failureMessage("Gateway timeout")
             .build();
         when(paymentHandler.capturePayment(capturePaymentRequestVm)).thenReturn(failedPayment);
@@ -134,7 +134,7 @@ class PaymentServiceTest {
 
         CapturePaymentResponseVm result = paymentService.capturePayment(capturePaymentRequestVm);
 
-        assertEquals(PaymentStatus.FAILED, result.paymentStatus());
+        assertEquals(PaymentStatus.CANCELLED, result.paymentStatus());
         assertEquals("Gateway timeout", result.failureMessage());
         }
 
