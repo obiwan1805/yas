@@ -31,7 +31,7 @@ public class PaymentProviderController {
             .body(paymentProviderService.create(createPaymentVm));
     }
 
-    @PutMapping("/backoffice/payment-providers")
+   @PutMapping("/backoffice/payment-providers")
     public ResponseEntity<PaymentProviderVm> update(@Valid @RequestBody UpdatePaymentVm updatePaymentVm) {
         return ResponseEntity.ok(paymentProviderService.update(updatePaymentVm));
     }

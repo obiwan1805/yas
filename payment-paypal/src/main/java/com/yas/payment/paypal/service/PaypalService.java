@@ -87,8 +87,7 @@ public class PaypalService {
     }
 
     public PaypalCapturePaymentResponse capturePayment(PaypalCapturePaymentRequest capturePaymentRequest) {
-        PayPalHttpClient payPalHttpClient = payPalHttpClientInitializer
-            .createPaypalClient(capturePaymentRequest.paymentSettings());
+        PayPalHttpClient payPalHttpClient = payPalHttpClientInitializer.createPaypalClient(capturePaymentRequest.paymentSettings());
         OrdersCaptureRequest ordersCaptureRequest = new OrdersCaptureRequest(capturePaymentRequest.token());
         try {
             HttpResponse<Order> httpResponse = payPalHttpClient.execute(ordersCaptureRequest);

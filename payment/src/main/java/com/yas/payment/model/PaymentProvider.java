@@ -1,6 +1,5 @@
 package com.yas.payment.model;
 
-import com.yas.commonlibrary.model.AbstractAuditEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -11,6 +10,8 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.domain.Persistable;
+
+import com.yas.commonlibrary.model.AbstractAuditEntity;
 
 @DynamicUpdate
 @Entity
