@@ -33,16 +33,16 @@ class PaymentControllerTest {
             .totalPrice(new BigDecimal("10.00"))
             .checkoutId("checkout-1")
             .build();
-        InitPaymentResponseVm expected = InitPaymentResponseVm.builder()
+        InitPaymentResponseVm responseVm = InitPaymentResponseVm.builder()
             .status("success")
-            .paymentId("pid-1")
-            .redirectUrl("https://redirect")
+            .paymentId("id-1")
+            .redirectUrl("http://redirect")
             .build();
-        when(paymentService.initPayment(requestVm)).thenReturn(expected);
+        when(paymentService.initPayment(requestVm)).thenReturn(responseVm);
 
         InitPaymentResponseVm result = paymentController.initPayment(requestVm);
 
-        assertThat(result).isEqualTo(expected);
+        assertThat(result).isEqualTo(responseVm);
         verify(paymentService).initPayment(requestVm);
     }
 
@@ -52,29 +52,29 @@ class PaymentControllerTest {
             .paymentMethod(PaymentMethod.PAYPAL.name())
             .token("token-1")
             .build();
-        CapturePaymentResponseVm expected = CapturePaymentResponseVm.builder()
-            .orderId(11L)
-            .checkoutId("checkout-2")
+        CapturePaymentResponseVm responseVm = CapturePaymentResponseVm.builder()
+            .orderId(10L)
+            .checkoutId("checkout-1")
             .amount(new BigDecimal("10.00"))
-            .paymentFee(new BigDecimal("0.10"))
+            .paymentFee(new BigDecimal("1.00"))
             .gatewayTransactionId("txn-1")
             .paymentMethod(PaymentMethod.PAYPAL)
             .paymentStatus(PaymentStatus.COMPLETED)
             .failureMessage(null)
             .build();
-        when(paymentService.capturePayment(requestVm)).thenReturn(expected);
+        when(paymentService.capturePayment(requestVm)).thenReturn(responseVm);
 
         CapturePaymentResponseVm result = paymentController.capturePayment(requestVm);
 
-        assertThat(result).isEqualTo(expected);
+        assertThat(result).isEqualTo(responseVm);
         verify(paymentService).capturePayment(requestVm);
     }
 
     @Test
-    void cancelPayment_shouldReturnSuccessMessage() {
-        var response = paymentController.cancelPayment();
+    void cancelPayment_shouldReturnOkMessage() {
+        var result = paymentController.cancelPayment();
 
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody()).isEqualTo("Payment cancelled");
+        assertThat(result.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(result.getBody()).isEqualTo("Payment cancelled");
     }
 }

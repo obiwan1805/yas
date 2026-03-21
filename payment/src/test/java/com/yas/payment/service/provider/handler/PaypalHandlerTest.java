@@ -36,56 +36,56 @@ class PaypalHandlerTest {
     }
 
     @Test
+    void getProviderId_shouldReturnPaypal() {
+        assertThat(paypalHandler.getProviderId()).isEqualTo(PaymentMethod.PAYPAL.name());
+    }
+
+    @Test
     void initPayment_shouldMapRequestAndResponse() {
         InitPaymentRequestVm requestVm = InitPaymentRequestVm.builder()
             .paymentMethod(PaymentMethod.PAYPAL.name())
-            .totalPrice(new BigDecimal("120.50"))
-            .checkoutId("checkout-123")
+            .checkoutId("checkout-1")
+            .totalPrice(new BigDecimal("99.50"))
             .build();
-
         when(paymentProviderService.getAdditionalSettingsByPaymentProviderId(PaymentMethod.PAYPAL.name()))
-            .thenReturn("paypal-settings");
+            .thenReturn("clientId=abc");
         when(paypalService.createPayment(any(PaypalCreatePaymentRequest.class)))
             .thenReturn(PaypalCreatePaymentResponse.builder()
                 .status("success")
-                .paymentId("payment-id")
-                .redirectUrl("https://paypal.test/redirect")
+                .paymentId("paypal-payment-id")
+                .redirectUrl("https://paypal/approve")
                 .build());
 
         InitiatedPayment result = paypalHandler.initPayment(requestVm);
 
-        assertThat(result.getStatus()).isEqualTo("success");
-        assertThat(result.getPaymentId()).isEqualTo("payment-id");
-        assertThat(result.getRedirectUrl()).isEqualTo("https://paypal.test/redirect");
-
-        ArgumentCaptor<PaypalCreatePaymentRequest> requestCaptor = ArgumentCaptor.forClass(
-            PaypalCreatePaymentRequest.class
-        );
+        ArgumentCaptor<PaypalCreatePaymentRequest> requestCaptor =
+            ArgumentCaptor.forClass(PaypalCreatePaymentRequest.class);
         verify(paypalService).createPayment(requestCaptor.capture());
-        verify(paymentProviderService).getAdditionalSettingsByPaymentProviderId(PaymentMethod.PAYPAL.name());
-
         PaypalCreatePaymentRequest capturedRequest = requestCaptor.getValue();
-        assertThat(capturedRequest.totalPrice()).isEqualByComparingTo(new BigDecimal("120.50"));
-        assertThat(capturedRequest.checkoutId()).isEqualTo("checkout-123");
+        assertThat(capturedRequest.totalPrice()).isEqualByComparingTo(new BigDecimal("99.50"));
+        assertThat(capturedRequest.checkoutId()).isEqualTo("checkout-1");
         assertThat(capturedRequest.paymentMethod()).isEqualTo(PaymentMethod.PAYPAL.name());
-        assertThat(capturedRequest.paymentSettings()).isEqualTo("paypal-settings");
+        assertThat(capturedRequest.paymentSettings()).isEqualTo("clientId=abc");
+
+        assertThat(result.getStatus()).isEqualTo("success");
+        assertThat(result.getPaymentId()).isEqualTo("paypal-payment-id");
+        assertThat(result.getRedirectUrl()).isEqualTo("https://paypal/approve");
     }
 
     @Test
-    void capturePayment_shouldMapRequestAndResponse() {
+    void capturePayment_shouldMapRequestAndEnumResponse() {
         CapturePaymentRequestVm requestVm = CapturePaymentRequestVm.builder()
             .paymentMethod(PaymentMethod.PAYPAL.name())
-            .token("token-xyz")
+            .token("paypal-token")
             .build();
-
         when(paymentProviderService.getAdditionalSettingsByPaymentProviderId(PaymentMethod.PAYPAL.name()))
-            .thenReturn("paypal-settings");
+            .thenReturn("clientId=abc");
         when(paypalService.capturePayment(any(PaypalCapturePaymentRequest.class)))
             .thenReturn(PaypalCapturePaymentResponse.builder()
-                .checkoutId("checkout-456")
-                .amount(new BigDecimal("120.50"))
-                .paymentFee(new BigDecimal("1.20"))
-                .gatewayTransactionId("gateway-789")
+                .checkoutId("checkout-1")
+                .amount(new BigDecimal("50.00"))
+                .paymentFee(new BigDecimal("2.00"))
+                .gatewayTransactionId("tx-1")
                 .paymentMethod(PaymentMethod.PAYPAL.name())
                 .paymentStatus(PaymentStatus.COMPLETED.name())
                 .failureMessage(null)
@@ -93,22 +93,19 @@ class PaypalHandlerTest {
 
         CapturedPayment result = paypalHandler.capturePayment(requestVm);
 
-        assertThat(result.getCheckoutId()).isEqualTo("checkout-456");
-        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("120.50"));
-        assertThat(result.getPaymentFee()).isEqualByComparingTo(new BigDecimal("1.20"));
-        assertThat(result.getGatewayTransactionId()).isEqualTo("gateway-789");
+        ArgumentCaptor<PaypalCapturePaymentRequest> requestCaptor =
+            ArgumentCaptor.forClass(PaypalCapturePaymentRequest.class);
+        verify(paypalService).capturePayment(requestCaptor.capture());
+        PaypalCapturePaymentRequest capturedRequest = requestCaptor.getValue();
+        assertThat(capturedRequest.token()).isEqualTo("paypal-token");
+        assertThat(capturedRequest.paymentSettings()).isEqualTo("clientId=abc");
+
+        assertThat(result.getCheckoutId()).isEqualTo("checkout-1");
+        assertThat(result.getAmount()).isEqualByComparingTo(new BigDecimal("50.00"));
+        assertThat(result.getPaymentFee()).isEqualByComparingTo(new BigDecimal("2.00"));
+        assertThat(result.getGatewayTransactionId()).isEqualTo("tx-1");
         assertThat(result.getPaymentMethod()).isEqualTo(PaymentMethod.PAYPAL);
         assertThat(result.getPaymentStatus()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(result.getFailureMessage()).isNull();
-
-        ArgumentCaptor<PaypalCapturePaymentRequest> requestCaptor = ArgumentCaptor.forClass(
-            PaypalCapturePaymentRequest.class
-        );
-        verify(paypalService).capturePayment(requestCaptor.capture());
-        verify(paymentProviderService).getAdditionalSettingsByPaymentProviderId(PaymentMethod.PAYPAL.name());
-
-        PaypalCapturePaymentRequest capturedRequest = requestCaptor.getValue();
-        assertThat(capturedRequest.token()).isEqualTo("token-xyz");
-        assertThat(capturedRequest.paymentSettings()).isEqualTo("paypal-settings");
     }
 }

@@ -7,7 +7,6 @@ import com.yas.payment.model.enumeration.PaymentMethod;
 import com.yas.payment.model.enumeration.PaymentStatus;
 import com.yas.payment.repository.PaymentRepository;
 import com.yas.payment.service.provider.handler.PaymentHandler;
-import com.yas.payment.service.provider.handler.PaypalHandler;
 import com.yas.payment.viewmodel.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,11 +14,10 @@ import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -69,6 +67,21 @@ class PaymentServiceTest {
     }
 
     @Test
+    void initPayment_UnknownProvider_ShouldThrowException() {
+        InitPaymentRequestVm requestVm = InitPaymentRequestVm.builder()
+                .paymentMethod("UNKNOWN")
+                .checkoutId("123")
+                .totalPrice(BigDecimal.ONE)
+                .build();
+
+        assertThatThrownBy(() -> paymentService.initPayment(requestVm))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("No payment handler found for provider: UNKNOWN");
+
+        verify(paymentHandler, never()).initPayment(any());
+    }
+
+    @Test
     void capturePayment_Success() {
         CapturePaymentRequestVm capturePaymentRequestVM = CapturePaymentRequestVm.builder()
                 .paymentMethod(PaymentMethod.PAYPAL.name()).token("123").build();
@@ -82,6 +95,48 @@ class PaymentServiceTest {
         verifyOrderServiceInteractions(capturedPayment);
         verifyResult(capturedPayment, capturePaymentResponseVm);
     }
+
+        @Test
+        void capturePayment_UnknownProvider_ShouldThrowException() {
+        CapturePaymentRequestVm requestVm = CapturePaymentRequestVm.builder()
+            .paymentMethod("UNKNOWN")
+            .token("123")
+            .build();
+
+        assertThatThrownBy(() -> paymentService.capturePayment(requestVm))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("No payment handler found for provider: UNKNOWN");
+
+        verify(paymentHandler, never()).capturePayment(any());
+        verifyNoInteractions(orderService);
+        verifyNoInteractions(paymentRepository);
+        }
+
+        @Test
+        void capturePayment_FailedPayment_ShouldPersistAndReturnFailureMessage() {
+        CapturePaymentRequestVm capturePaymentRequestVm = CapturePaymentRequestVm.builder()
+            .paymentMethod(PaymentMethod.PAYPAL.name())
+            .token("123")
+            .build();
+        CapturedPayment failedPayment = CapturedPayment.builder()
+            .orderId(2L)
+            .checkoutId("secretCheckoutId")
+            .amount(BigDecimal.valueOf(100.0))
+            .paymentFee(BigDecimal.valueOf(500))
+            .gatewayTransactionId("gatewayId")
+            .paymentMethod(PaymentMethod.BANKING)
+                .paymentStatus(PaymentStatus.CANCELLED)
+            .failureMessage("Gateway timeout")
+            .build();
+        when(paymentHandler.capturePayment(capturePaymentRequestVm)).thenReturn(failedPayment);
+        when(orderService.updateCheckoutStatus(failedPayment)).thenReturn(999L);
+        when(paymentRepository.save(any())).thenReturn(payment);
+
+        CapturePaymentResponseVm result = paymentService.capturePayment(capturePaymentRequestVm);
+
+        assertEquals(PaymentStatus.CANCELLED, result.paymentStatus());
+        assertEquals("Gateway timeout", result.failureMessage());
+        }
 
     private CapturedPayment prepareCapturedPayment() {
         return CapturedPayment.builder()

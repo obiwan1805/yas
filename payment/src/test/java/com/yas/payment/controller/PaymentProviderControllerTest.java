@@ -11,7 +11,6 @@ import com.yas.payment.viewmodel.paymentprovider.UpdatePaymentVm;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
@@ -30,62 +29,42 @@ class PaymentProviderControllerTest {
     void create_shouldReturnCreatedResponse() {
         CreatePaymentVm requestVm = new CreatePaymentVm();
         requestVm.setId("PAYPAL");
-        requestVm.setName("Paypal");
-        requestVm.setConfigureUrl("/config");
+        PaymentProviderVm responseVm = new PaymentProviderVm("PAYPAL", "Paypal", "/config", 1, 10L, "icon");
+        when(paymentProviderService.create(requestVm)).thenReturn(responseVm);
 
-        PaymentProviderVm expected = new PaymentProviderVm(
-            "PAYPAL",
-            "Paypal",
-            "/config",
-            1,
-            100L,
-            "http://icon"
-        );
-        when(paymentProviderService.create(requestVm)).thenReturn(expected);
+        var result = paymentProviderController.create(requestVm);
 
-        var response = paymentProviderController.create(requestVm);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isEqualTo(expected);
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(result.getBody()).isEqualTo(responseVm);
         verify(paymentProviderService).create(requestVm);
     }
 
     @Test
     void update_shouldReturnOkResponse() {
         UpdatePaymentVm requestVm = new UpdatePaymentVm();
-        requestVm.setId("COD");
-        requestVm.setName("Cash");
-        requestVm.setConfigureUrl("/config-cod");
+        requestVm.setId("PAYPAL");
+        PaymentProviderVm responseVm = new PaymentProviderVm("PAYPAL", "Paypal", "/config", 2, 11L, "icon2");
+        when(paymentProviderService.update(requestVm)).thenReturn(responseVm);
 
-        PaymentProviderVm expected = new PaymentProviderVm(
-            "COD",
-            "Cash",
-            "/config-cod",
-            2,
-            101L,
-            "http://icon-cod"
-        );
-        when(paymentProviderService.update(requestVm)).thenReturn(expected);
+        var result = paymentProviderController.update(requestVm);
 
-        var response = paymentProviderController.update(requestVm);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(expected);
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(responseVm);
         verify(paymentProviderService).update(requestVm);
     }
 
     @Test
     void getAll_shouldReturnEnabledProviders() {
-        Pageable pageable = PageRequest.of(0, 20);
+        Pageable pageable = Pageable.ofSize(10);
         List<PaymentProviderVm> providers = List.of(
-            new PaymentProviderVm("PAYPAL", "Paypal", "/config", 1, 100L, "http://icon")
+            new PaymentProviderVm("PAYPAL", "Paypal", "/config", 1, 10L, "icon")
         );
         when(paymentProviderService.getEnabledPaymentProviders(pageable)).thenReturn(providers);
 
-        var response = paymentProviderController.getAll(pageable);
+        var result = paymentProviderController.getAll(pageable);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(providers);
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(result.getBody()).isEqualTo(providers);
         verify(paymentProviderService).getEnabledPaymentProviders(pageable);
     }
 }
