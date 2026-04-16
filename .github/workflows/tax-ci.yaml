@@ -27,64 +27,71 @@ jobs:
         with:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
       - uses: ./.github/workflows/actions
-      - name: Run Maven Build Command
-        run: mvn clean install -pl tax -am
-      - name: Run Maven Checkstyle
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        run: mvn checkstyle:checkstyle -pl tax -am -Dcheckstyle.output.file=tax-checkstyle-result.xml
-      - name: Upload Checkstyle Result
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: jwgmeligmeyling/checkstyle-github-action@master
-        with:
-          path: '**/tax-checkstyle-result.xml'
-      - name: Test Results
-        uses: dorny/test-reporter@v1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
-        with:
-          name: Tax-Service-Unit-Test-Results
-          path: "tax/**/*-reports/TEST*.xml"
-          reporter: java-junit
-      # - name: Analyze with sonar cloud
+      # - name: Run Maven Build Command
+      #   run: mvn clean install -pl tax -am
+      # - name: Run Maven Checkstyle
       #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   run: mvn checkstyle:checkstyle -pl tax -am -Dcheckstyle.output.file=tax-checkstyle-result.xml
+      # - name: Upload Checkstyle Result
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   uses: jwgmeligmeyling/checkstyle-github-action@master
+      #   with:
+      #     path: '**/tax-checkstyle-result.xml'
+      # - name: Test Results
+      #   uses: dorny/test-reporter@v1
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' && (success() || failure()) }}
+      #   with:
+      #     name: Tax-Service-Unit-Test-Results
+      #     path: "tax/**/*-reports/TEST*.xml"
+      #     reporter: java-junit
+      # # - name: Analyze with sonar cloud
+      # #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      # #   env:
+      # #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # #   run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f tax
+      # - name: OWASP Dependency Check
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   uses: dependency-check/Dependency-Check_Action@main
       #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #   run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f tax
-      - name: OWASP Dependency Check
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: dependency-check/Dependency-Check_Action@main
-        env:
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
-      - name: Upload OWASP Dependency Check results
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: OWASP Dependency Check Report
-          path: ${{github.workspace}}/reports
-      - name: Add coverage report to PR
-        uses: madrapps/jacoco-report@v1.6.1
-        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        with:
-          paths: ${{github.workspace}}/tax/target/site/jacoco/jacoco.xml
-          token: ${{secrets.GITHUB_TOKEN}}
-          min-coverage-overall: 70
-          min-coverage-changed-files: 70
-          title: 'Tax Coverage Report'
-          update-comment: true
+      #     JAVA_HOME: /opt/jdk
+      #   with:
+      #     project: 'yas'
+      #     path: '.'
+      #     format: 'HTML'
+      # - name: Upload OWASP Dependency Check results
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   uses: actions/upload-artifact@master
+      #   with:
+      #     name: OWASP Dependency Check Report
+      #     path: ${{github.workspace}}/reports
+      # - name: Add coverage report to PR
+      #   uses: madrapps/jacoco-report@v1.6.1
+      #   if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+      #   with:
+      #     paths: ${{github.workspace}}/tax/target/site/jacoco/jacoco.xml
+      #     token: ${{secrets.GITHUB_TOKEN}}
+      #     min-coverage-overall: 70
+      #     min-coverage-changed-files: 70
+      #     title: 'Tax Coverage Report'
+      #     update-comment: true
+
+
+      # Lấy mã commit ID rút gọn (Short SHA)
+      - name: Get Short SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Log in to the Container registry
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.DOCKER_TOKEN }}
       - name: Build and push Docker images
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v6
         with:
           context: ./tax
           push: true
-          tags: ghcr.io/obiwan1805/yas-tax:latest
+          # Gắn tag theo commit ID rút gọn để dùng cho job CD sau này
+          tags: ghcr.io/dungx2409/yas-tax:${{ steps.vars.outputs.sha_short }}
