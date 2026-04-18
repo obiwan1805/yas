@@ -14,14 +14,14 @@ spec:
     passwordSecret:
       name: postgresql-credentials
       key: password
-    host: postgresql.postgres
+    host: infra-postgresql.dev
     database: keycloak
     port: 5432
   http:
     httpEnabled: true
     httpPort: 80
   hostname:
-    hostname: http://{{ .Values.hostname }}
+    hostname: {{ .Values.hostname }}
     backchannelDynamic: true
     strict: false
   proxy:
