@@ -21,8 +21,7 @@ spec:
     httpEnabled: true
     httpPort: 8080
   hostname:
-    hostname: {{ .Values.hostname }}
-    backchannelDynamic: false
+    hostname: http://{{ .Values.hostname }}
     strict: false
   proxy:
     headers: xforwarded
