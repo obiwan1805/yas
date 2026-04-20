@@ -1,0 +1,314 @@
+apiVersion: v1
+entries:
+  backend:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:37.581171221Z"
+    description: A Helm chart for Kubernetes
+    digest: d7667039e875fd388583d1db61139bd0a6acd08e1154d531544323eb8fbfece4
+    name: backend
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/backend-0.1.2/backend-0.1.2.tgz
+    version: 0.1.2
+  backoffice-bff:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:37.700222988Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 2259702e9753f01f30047efa72597d305028654d253e59ec429894cde22b9c1b
+    name: backoffice-bff
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/backoffice-bff-0.1.0/backoffice-bff-0.1.0.tgz
+    version: 0.1.0
+  backoffice-ui:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:37.852184254Z"
+    dependencies:
+    - name: ui
+      repository: file://../ui
+      version: 0.1.0
+    description: A Helm chart for Kubernetes
+    digest: 1d0bb570748ec6ba8a495fbc20d9972de67e03f13add922d81efec78d7a35b69
+    name: backoffice-ui
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/backoffice-ui-0.1.0/backoffice-ui-0.1.0.tgz
+    version: 0.1.0
+  cart:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.012532725Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 0c735571baaead1ff7dcc87d7188d418bea0bc911f2811ebd1ce82100ff05b78
+    name: cart
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/cart-0.2.0/cart-0.2.0.tgz
+    version: 0.2.0
+  customer:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.162243908Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: e04213e3d216ff5e4a8001ebcee03487ac81e360df840870ed3182c0d40c970c
+    name: customer
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/customer-0.1.0/customer-0.1.0.tgz
+    version: 0.1.0
+  inventory:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.289713284Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: ae39212e8aab005db21c267f83c49307b04b716035ae57dd2f95e99d449437e2
+    name: inventory
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/inventory-0.1.0/inventory-0.1.0.tgz
+    version: 0.1.0
+  location:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.417731908Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 01cb530d4ae1d5085cec2a07fb6aed63622a7ef0e303e71a10cdb750de536aae
+    name: location
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/location-0.1.0/location-0.1.0.tgz
+    version: 0.1.0
+  media:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.564664358Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 6fe45d5614365213cff1ecf3d858fa1d1ad4b8cc1faefeffb38915bcadd1a09f
+    name: media
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/media-0.1.0/media-0.1.0.tgz
+    version: 0.1.0
+  order:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.71046782Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: be9990d3d47d661603c7df09c60c38c76152f464ffabd94197b80719f3bf6a65
+    name: order
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/order-0.2.0/order-0.2.0.tgz
+    version: 0.2.0
+  payment:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.841552399Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: aff4339e04a8dfb6240d59940194c1d22263668e31af625e3efb5c1f1168a86e
+    name: payment
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/payment-0.2.0/payment-0.2.0.tgz
+    version: 0.2.0
+  payment-paypal:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:38.965944566Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 8600cee6d61dc78ddcd59522d9d52ed12d61052f683577e95a1f7a05923ce16a
+    name: payment-paypal
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/payment-paypal-0.2.0/payment-paypal-0.2.0.tgz
+    version: 0.2.0
+  product:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.100205931Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: f6ea1ef6a5b349d3153c44b8048c0e93d39e6ab90a82783b6800ff6bb62276a8
+    name: product
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/product-0.1.0/product-0.1.0.tgz
+    version: 0.1.0
+  promotion:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.220765671Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 4934f938a3d01a5c8da80fd3189388a8d18ae091807cf1350507983bc7c51c5e
+    name: promotion
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/promotion-0.1.0/promotion-0.1.0.tgz
+    version: 0.1.0
+  rating:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.415342518Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 09139e953fc10497927818800594e626b880fa50503eb971724172d4276ac3b1
+    name: rating
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/rating-0.1.0/rating-0.1.0.tgz
+    version: 0.1.0
+  recommendation:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.57008565Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 289b663f0baf9d6654a36a762d4ac694a2e26247c9cc7d10d8e2bf4362b4420c
+    name: recommendation
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/recommendation-0.1.0/recommendation-0.1.0.tgz
+    version: 0.1.0
+  sampledata:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.763415195Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 76d81ba2e78df8edd0939d296aefc4881312fb1ca315d7f61a0a3ea65d474ad8
+    name: sampledata
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/sampledata-0.1.0/sampledata-0.1.0.tgz
+    version: 0.1.0
+  search:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:39.95054759Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 297ba3b9d90adee82067f796bbd69492a6eb01853bf95629ddf7a25d23425a55
+    name: search
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/search-0.1.0/search-0.1.0.tgz
+    version: 0.1.0
+  storefront-bff:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:40.077499689Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: f2c233e19bc2fe0552aa034f89acb5733963f676bffcdeae5f27feb8727d19cb
+    name: storefront-bff
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/storefront-bff-0.1.0/storefront-bff-0.1.0.tgz
+    version: 0.1.0
+  storefront-ui:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:40.243507262Z"
+    dependencies:
+    - name: ui
+      repository: file://../ui
+      version: 0.1.0
+    description: A Helm chart for Kubernetes
+    digest: 44fcdafa0f464451a1f29524862a82150dc67cb60271a2f3207cdbd6b6204f23
+    name: storefront-ui
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/storefront-ui-0.1.0/storefront-ui-0.1.0.tgz
+    version: 0.1.0
+  tax:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:40.352888952Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: ab6e6cc2272bd61b496a1a0c3802208af0e271ecd8cd207c767bbb00e09efa8a
+    name: tax
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/tax-0.1.0/tax-0.1.0.tgz
+    version: 0.1.0
+  webhook:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T02:46:40.481272838Z"
+    dependencies:
+    - name: backend
+      repository: file://../backend
+      version: 0.1.2
+    description: A Helm chart for Kubernetes
+    digest: 51c4d89785cac856a2738675be5938d887858b437a4b8f2c0693f567f5e92d36
+    name: webhook
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/webhook-0.1.0/webhook-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-04-20T02:46:40.481280773Z"
