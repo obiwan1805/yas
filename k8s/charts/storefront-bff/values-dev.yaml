@@ -4,3 +4,7 @@ backend:
   ingress:
     enabled: true
     host: api.storefront-bff.dev.local.com
+  resources:
+    requests:
+      cpu: 10m
+      memory: 128Mi
