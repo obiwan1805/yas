@@ -1,6 +1,6 @@
 backend:
   image:
-    tag: COMMIT_SHA
+    tag: latest
   ingress:
     enabled: true
     host: backoffice-ui.dev.local.com
