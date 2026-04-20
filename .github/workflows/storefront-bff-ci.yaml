@@ -53,17 +53,14 @@ jobs:
 
       - name: OWASP Dependency Check
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        uses: dependency-check/Dependency-Check_Action@main
+        continue-on-error: true
         env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: |
-          mkdir -p reports
-          mvn -B -ntp org.owasp:dependency-check-maven:10.0.4:check \
-            -pl storefront-bff \
-            -DdataDirectory="$GITHUB_WORKSPACE/.odc-data" \
-            -DnvdValidForHours=48 \
-            -Dformats=HTML \
-            -DoutputDirectory="$GITHUB_WORKSPACE/reports" \
-            -DfailBuildOnCVSS=11
+          JAVA_HOME: /opt/jdk
+        with:
+          project: 'yas'
+          path: '.'
+          format: 'HTML'
       - name: Upload OWASP Dependency Check results
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: actions/upload-artifact@master
