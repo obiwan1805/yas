@@ -1,0 +1,6 @@
+backend:
+  image:
+    tag: COMMIT_SHA
+  ingress:
+    enabled: true
+    host: api.location.dev.local.com

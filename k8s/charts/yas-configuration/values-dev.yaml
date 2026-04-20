@@ -1,0 +1,134 @@
+yas:
+  services:
+    cart: http://cart.dev.svc.cluster.local/cart
+    customer: http://customer.dev.svc.cluster.local/customer
+    inventory: http://inventory.dev.svc.cluster.local/inventory
+    location: http://location.dev.svc.cluster.local/location
+    media: http://media.dev.svc.cluster.local/media
+    order: http://order.dev.svc.cluster.local/order
+    payment: http://payment.dev.svc.cluster.local/payment
+    payment-paypal: http://payment-paypal.dev.svc.cluster.local/payment-paypal
+    product: http://product.dev.svc.cluster.local/product
+    promotion: http://promotion.dev.svc.cluster.local/promotion
+    rating: http://rating.dev.svc.cluster.local/rating
+    search: http://search.dev.svc.cluster.local/search
+    tax: http://tax.dev.svc.cluster.local/tax
+    sampledata: http://sampledata.dev.svc.cluster.local/sampledata
+    recommendation: http://recommendation.dev.svc.cluster.local/recommendation
+    webhook: http://webhook.dev.svc.cluster.local/webhook
+gatewayRoutesConfig:
+  spring:
+    cloud:
+      gateway:
+        routes:
+        - id: cart_api
+          uri: http://cart.dev.svc.cluster.local
+          predicates:
+          - Path=/api/cart/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: customer_api
+          uri: http://customer.dev.svc.cluster.local
+          predicates:
+          - Path=/api/customer/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: inventory_api
+          uri: http://inventory.dev.svc.cluster.local
+          predicates:
+          - Path=/api/inventory/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: location_api
+          uri: http://location.dev.svc.cluster.local
+          predicates:
+          - Path=/api/location/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: media_api
+          uri: http://media.dev.svc.cluster.local
+          predicates:
+          - Path=/api/media/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+        - id: order_api
+          uri: http://order.dev.svc.cluster.local
+          predicates:
+          - Path=/api/order/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: payment_api
+          uri: http://payment.dev.svc.cluster.local
+          predicates:
+          - Path=/api/payment/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: payment-paypal_api
+          uri: http://payment-paypal.dev.svc.cluster.local
+          predicates:
+          - Path=/api/payment-paypal/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: product_api
+          uri: http://product.dev.svc.cluster.local
+          predicates:
+          - Path=/api/product/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: promotion_api
+          uri: http://promotion.dev.svc.cluster.local
+          predicates:
+          - Path=/api/promotion/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: rating_api
+          uri: http://rating.dev.svc.cluster.local
+          predicates:
+          - Path=/api/rating/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: search_api
+          uri: http://search.dev.svc.cluster.local
+          predicates:
+          - Path=/api/search/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: tax_api
+          uri: http://tax.dev.svc.cluster.local
+          predicates:
+          - Path=/api/tax/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: sampledata_api
+          uri: http://sampledata.dev.svc.cluster.local
+          predicates:
+          - Path=/api/sampledata/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: recommendation_api
+          uri: http://recommendation.dev.svc.cluster.local
+          predicates:
+          - Path=/api/recommendation/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
+        - id: webhook_api
+          uri: http://webhook.dev.svc.cluster.local
+          predicates:
+          - Path=/api/webhook/**
+          filters:
+          - RewritePath=/api/(?<segment>.*), /${segment}
+          - TokenRelay=
