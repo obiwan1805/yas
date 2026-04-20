@@ -30,6 +30,21 @@ jobs:
         run: |
           helm repo add stakater https://stakater.github.io/stakater-charts
 
+      - name: Ensure gh-pages branch exists
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages; then
+            echo "gh-pages already exists"
+          else
+            echo "Creating gh-pages branch"
+            git checkout --orphan gh-pages
+            git rm -rf .
+            echo "# Helm Chart Repository" > README.md
+            git add README.md
+            git commit -m "chore: initialize gh-pages branch for chart repository"
+            git push origin gh-pages
+            git checkout "${{ github.ref_name }}"
+          fi
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
         with:
