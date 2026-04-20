@@ -42,15 +42,28 @@ jobs:
       #   env:
       #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       #   run: mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -f storefront-bff
+      - name: Cache OWASP Dependency-Check data
+        if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: .odc-data
+          key: owasp-odc-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            owasp-odc-${{ runner.os }}-
+
       - name: OWASP Dependency Check
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
-        uses: dependency-check/Dependency-Check_Action@main
         env:
-          JAVA_HOME: /opt/jdk
-        with:
-          project: 'yas'
-          path: '.'
-          format: 'HTML'
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          mkdir -p reports
+          mvn -B -ntp org.owasp:dependency-check-maven:10.0.4:check \
+            -pl storefront-bff \
+            -DdataDirectory="$GITHUB_WORKSPACE/.odc-data" \
+            -DnvdValidForHours=48 \
+            -Dformats=HTML \
+            -DoutputDirectory="$GITHUB_WORKSPACE/reports" \
+            -DfailBuildOnCVSS=11
       - name: Upload OWASP Dependency Check results
         if: ${{ env.FROM_ORIGINAL_REPOSITORY == 'true' }}
         uses: actions/upload-artifact@master
