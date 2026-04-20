@@ -311,4 +311,19 @@ entries:
     urls:
     - https://github.com/obiwan1805/yas/releases/download/webhook-0.1.0/webhook-0.1.0.tgz
     version: 0.1.0
-generated: "2026-04-20T02:46:40.481280773Z"
+  yas-configuration:
+  - apiVersion: v2
+    appVersion: 1.1.0
+    created: "2026-04-20T03:46:07.773471725Z"
+    dependencies:
+    - name: reloader
+      repository: https://stakater.github.io/stakater-charts
+      version: 1.0.29
+    description: A Helm chart for Kubernetes
+    digest: 74b435916edebd687624d6f031a1077569ef20259f52ac713d51a8b46f2d01b3
+    name: yas-configuration
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/yas-configuration-0.4.0/yas-configuration-0.4.0.tgz
+    version: 0.4.0
+generated: "2026-04-20T03:46:07.773487124Z"
