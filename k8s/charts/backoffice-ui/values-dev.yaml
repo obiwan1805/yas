@@ -1,4 +1,4 @@
-backend:
+ui:
   image:
     tag: latest
   ingress:
