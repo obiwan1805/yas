@@ -281,6 +281,17 @@ entries:
     urls:
     - https://github.com/obiwan1805/yas/releases/download/storefront-ui-0.1.0/storefront-ui-0.1.0.tgz
     version: 0.1.0
+  swagger-ui:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T08:19:38.066471401Z"
+    description: A Helm chart for Kubernetes
+    digest: 01e367610e828452cbdd8f04adeccde87fc3009e98840463e3b8084c06cf9e4c
+    name: swagger-ui
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/swagger-ui-0.1.0/swagger-ui-0.1.0.tgz
+    version: 0.1.0
   tax:
   - apiVersion: v2
     appVersion: latest
@@ -295,6 +306,17 @@ entries:
     type: application
     urls:
     - https://github.com/obiwan1805/yas/releases/download/tax-0.1.0/tax-0.1.0.tgz
+    version: 0.1.0
+  ui:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-04-20T08:19:38.516468411Z"
+    description: A Helm chart for Kubernetes
+    digest: 6827da545182e3844ee212c93aeb575fd61d93fb70e2013428de5cea4702d18f
+    name: ui
+    type: application
+    urls:
+    - https://github.com/obiwan1805/yas/releases/download/ui-0.1.0/ui-0.1.0.tgz
     version: 0.1.0
   webhook:
   - apiVersion: v2
@@ -326,4 +348,4 @@ entries:
     urls:
     - https://github.com/obiwan1805/yas/releases/download/yas-configuration-0.4.0/yas-configuration-0.4.0.tgz
     version: 0.4.0
-generated: "2026-04-20T03:46:07.773487124Z"
+generated: "2026-04-20T08:19:39.07431354Z"
