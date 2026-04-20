@@ -215,7 +215,7 @@ backofficeBffExtraConfig:
             yas-keycloak:
               # Use explicit endpoints (internal DNS) instead of issuer-uri so Spring does not
               # fail issuer validation against Keycloak's public hostname in OIDC metadata.
-              authorization-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/auth
+              authorization-uri: http://identity.yas.local.com/realms/Yas/protocol/openid-connect/auth
               token-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/token
               jwk-set-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/certs
               user-info-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/userinfo
@@ -241,7 +241,7 @@ storefrontBffExtraConfig:
         client:
           provider:
             yas-keycloak:
-              authorization-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/auth
+              authorization-uri: http://identity.yas.local.com/realms/Yas/protocol/openid-connect/auth
               token-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/token
               jwk-set-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/certs
               user-info-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/userinfo
