@@ -29,7 +29,7 @@ env:
 jobs:
   deploy:
     name: Deploy developer environment
-    runs-on: [self-hosted, yas-vps]
+    runs-on: self-hosted
 
     steps:
       - name: Checkout source code
