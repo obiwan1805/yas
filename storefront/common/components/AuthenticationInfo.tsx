@@ -53,17 +53,17 @@ export default function AuthenticationInfo() {
               </Link>
             </Dropdown.Item>
             <Dropdown.Item>
-              <Link href="/logout" className="d-block h-full">
+              <a href="/logout" className="d-block h-full">
                 Logout
-              </Link>
+              </a>
             </Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
       ) : (
         <div>
-          <Link href="/oauth2/authorization/keycloak" className="d-blockh-full">
+          <a href="/oauth2/authorization/keycloak" className="d-blockh-full">
             Login
-          </Link>
+          </a>
         </div>
       )}
     </>
