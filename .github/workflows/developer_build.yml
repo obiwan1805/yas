@@ -116,6 +116,18 @@ jobs:
 
           echo "Chart dependencies:"
           ls -la "k8s/charts/$CHART/charts" || true
+      - name: Copy shared config and secrets to developer namespace
+        shell: bash
+        run: |
+          echo "Copy shared ConfigMap and Secret from dev to $NAMESPACE"
+
+          kubectl get configmap yas-configuration-configmap -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
+
+          kubectl get secret yas-postgresql-credentials-secret -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
 
       - name: Deploy service by Helm
         shell: bash
