@@ -103,7 +103,7 @@ jobs:
           kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 
           echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
-          
+
       - name: Build Helm chart dependencies
         shell: bash
         run: |
@@ -138,14 +138,22 @@ jobs:
           echo "  host      = $HOST"
 
           helm upgrade --install "$RELEASE" "k8s/charts/$CHART" \
-            -n "$NAMESPACE" \
-            -f "k8s/charts/$CHART/values.yaml" \
-            --set "${IMAGE_KEY}.image.repository=$IMAGE" \
-            --set "${IMAGE_KEY}.image.tag=$TAG" \
-            --set ingress.enabled=true \
-            --set ingress.host="$HOST" \
-            --wait \
-            --timeout 10m
+          -n "$NAMESPACE" \
+          -f "k8s/charts/$CHART/values.yaml" \
+          --set "${IMAGE_KEY}.image.repository=$IMAGE" \
+          --set "${IMAGE_KEY}.image.tag=$TAG" \
+          --set "${IMAGE_KEY}.resources.requests.cpu=10m" \
+          --set "${IMAGE_KEY}.resources.requests.memory=128Mi" \
+          --set "${IMAGE_KEY}.resources.limits.cpu=500m" \
+          --set "${IMAGE_KEY}.resources.limits.memory=512Mi" \
+          --set resources.requests.cpu=10m \
+          --set resources.requests.memory=128Mi \
+          --set resources.limits.cpu=500m \
+          --set resources.limits.memory=512Mi \
+          --set ingress.enabled=true \
+          --set ingress.host="$HOST" \
+          --wait \
+          --timeout 10m
 
       - name: Show result
         shell: bash
