@@ -14,14 +14,14 @@ spec:
     passwordSecret:
       name: postgresql-credentials
       key: password
-    host: postgresql.dev.svc.cluster.local
+    host: host: postgresql.postgres.svc.cluster.local
     database: keycloak
     port: 5432
   http:
     httpEnabled: true
     httpPort: 8080
   hostname:
-    hostname: http://{{ .Values.hostname }}
+    hostname: {{ .Values.hostname }}
     strict: false
   proxy:
     headers: xforwarded
