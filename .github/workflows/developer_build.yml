@@ -1,0 +1,156 @@
+name: "developer_build"
+
+on:
+  workflow_dispatch:
+    inputs:
+      developer_name:
+        description: "Tên developer, ví dụ: linh"
+        required: true
+        default: "linh"
+
+      service:
+        description: "Service cần deploy"
+        required: true
+        default: "tax"
+        type: choice
+        options:
+          - tax
+          - product
+          - storefront-ui
+
+      branch:
+        description: "Branch muốn deploy, ví dụ: dev_tax_service"
+        required: true
+        default: "main"
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  deploy:
+    name: Deploy developer environment
+    runs-on: [self-hosted, yas-vps]
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve service config
+        id: config
+        shell: bash
+        run: |
+          SERVICE="${{ github.event.inputs.service }}"
+
+          case "$SERVICE" in
+            tax)
+              echo "chart=tax" >> "$GITHUB_OUTPUT"
+              echo "image_name=yas-tax" >> "$GITHUB_OUTPUT"
+              echo "image_key=backend" >> "$GITHUB_OUTPUT"
+              ;;
+
+            product)
+              echo "chart=product" >> "$GITHUB_OUTPUT"
+              echo "image_name=yas-product" >> "$GITHUB_OUTPUT"
+              echo "image_key=backend" >> "$GITHUB_OUTPUT"
+              ;;
+
+            storefront-ui)
+              echo "chart=storefront-ui" >> "$GITHUB_OUTPUT"
+              echo "image_name=yas-storefront" >> "$GITHUB_OUTPUT"
+              echo "image_key=ui" >> "$GITHUB_OUTPUT"
+              ;;
+
+            *)
+              echo "Unknown service: $SERVICE"
+              exit 1
+              ;;
+          esac
+
+      - name: Resolve branch commit SHA
+        id: tag
+        shell: bash
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+
+          git fetch origin "$BRANCH" --depth=1
+          SHORT_SHA="$(git rev-parse --short=7 origin/$BRANCH)"
+
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "Branch $BRANCH commit SHA: $SHORT_SHA"
+
+      - name: Check image exists on Docker Hub
+        shell: bash
+        run: |
+          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ steps.config.outputs.image_name }}"
+          TAG="${{ steps.tag.outputs.short_sha }}"
+
+          echo "Checking image: $IMAGE:$TAG"
+
+          docker manifest inspect "$IMAGE:$TAG" > /dev/null || {
+            echo "Image $IMAGE:$TAG chưa tồn tại."
+            echo "Hãy push code lên branch để workflow 03 CI build image chạy trước."
+            exit 1
+          }
+
+      - name: Prepare namespace
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          NS="dev-${DEV_NAME}"
+
+          kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+
+          echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
+
+      - name: Deploy service by Helm
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          SERVICE="${{ github.event.inputs.service }}"
+          CHART="${{ steps.config.outputs.chart }}"
+          IMAGE_KEY="${{ steps.config.outputs.image_key }}"
+          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ steps.config.outputs.image_name }}"
+          TAG="${{ steps.tag.outputs.short_sha }}"
+          RELEASE="developer-${DEV_NAME}-${SERVICE}"
+
+          HOST="${SERVICE}-${DEV_NAME}.dev.local.com"
+
+          echo "Deploying:"
+          echo "  namespace = $NAMESPACE"
+          echo "  release   = $RELEASE"
+          echo "  chart     = $CHART"
+          echo "  image     = $IMAGE:$TAG"
+          echo "  host      = $HOST"
+
+          helm upgrade --install "$RELEASE" "k8s/charts/$CHART" \
+            -n "$NAMESPACE" \
+            -f "k8s/charts/$CHART/values.yaml" \
+            --set "${IMAGE_KEY}.image.repository=$IMAGE" \
+            --set "${IMAGE_KEY}.image.tag=$TAG" \
+            --set ingress.enabled=true \
+            --set ingress.host="$HOST" \
+            --wait \
+            --timeout 10m
+
+      - name: Show result
+        shell: bash
+        run: |
+          echo "Namespace: $NAMESPACE"
+
+          echo ""
+          echo "Pods:"
+          kubectl get pods -n "$NAMESPACE"
+
+          echo ""
+          echo "Services:"
+          kubectl get svc -n "$NAMESPACE"
+
+          echo ""
+          echo "Ingress:"
+          kubectl get ingress -n "$NAMESPACE" || true
+
+          echo ""
+          echo "Access host:"
+          echo "${{ github.event.inputs.service }}-${{ github.event.inputs.developer_name }}.dev.local.com"
