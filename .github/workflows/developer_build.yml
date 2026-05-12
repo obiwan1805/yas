@@ -103,6 +103,19 @@ jobs:
           kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
 
           echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
+          
+      - name: Build Helm chart dependencies
+        shell: bash
+        run: |
+          CHART="${{ steps.config.outputs.chart }}"
+
+          echo "Building dependencies for chart: k8s/charts/$CHART"
+
+          helm dependency update "k8s/charts/$CHART"
+          helm dependency build "k8s/charts/$CHART"
+
+          echo "Chart dependencies:"
+          ls -la "k8s/charts/$CHART/charts" || true
 
       - name: Deploy service by Helm
         shell: bash
