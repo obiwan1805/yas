@@ -142,16 +142,12 @@ jobs:
           -f "k8s/charts/$CHART/values.yaml" \
           --set "${IMAGE_KEY}.image.repository=$IMAGE" \
           --set "${IMAGE_KEY}.image.tag=$TAG" \
-          --set "${IMAGE_KEY}.resources.requests.cpu=10m" \
+          --set "${IMAGE_KEY}.resources.requests.cpu=1m" \
           --set "${IMAGE_KEY}.resources.requests.memory=128Mi" \
-          --set "${IMAGE_KEY}.resources.limits.cpu=500m" \
+          --set "${IMAGE_KEY}.resources.limits.cpu=300m" \
           --set "${IMAGE_KEY}.resources.limits.memory=512Mi" \
-          --set resources.requests.cpu=10m \
-          --set resources.requests.memory=128Mi \
-          --set resources.limits.cpu=500m \
-          --set resources.limits.memory=512Mi \
-          --set ingress.enabled=true \
-          --set ingress.host="$HOST" \
+          --set "${IMAGE_KEY}.ingress.enabled=true" \
+          --set "${IMAGE_KEY}.ingress.host=$HOST" \
           --wait \
           --timeout 10m
 
