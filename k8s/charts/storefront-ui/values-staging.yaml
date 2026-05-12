@@ -1,6 +1,11 @@
-backend:
+ui:
   image:
     tag: v1.0.0
   ingress:
     enabled: true
     host: storefront-ui.staging.local.com
+  extraEnvs:
+    - name: API_BASE_PATH
+      value: http://api.storefront-bff.staging.local.com/api
+    - name: HOSTNAME
+      value: "0.0.0.0"

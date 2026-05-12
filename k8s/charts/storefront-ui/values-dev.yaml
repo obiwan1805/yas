@@ -4,6 +4,11 @@ ui:
   ingress:
     enabled: true
     host: storefront-ui.dev.local.com
+  extraEnvs:
+    - name: API_BASE_PATH
+      value: http://api.storefront-bff.dev.local.com/api
+    - name: HOSTNAME
+      value: "0.0.0.0"
   resources:
     requests:
       cpu: 10m
