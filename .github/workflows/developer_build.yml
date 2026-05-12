@@ -154,14 +154,16 @@ jobs:
           -f "k8s/charts/$CHART/values.yaml" \
           --set "${IMAGE_KEY}.image.repository=$IMAGE" \
           --set "${IMAGE_KEY}.image.tag=$TAG" \
-          --set "${IMAGE_KEY}.resources.requests.cpu=1m" \
-          --set "${IMAGE_KEY}.resources.requests.memory=128Mi" \
+          --set "${IMAGE_KEY}.resources.requests.cpu=0" \
+          --set "${IMAGE_KEY}.resources.requests.memory=64Mi" \
           --set "${IMAGE_KEY}.resources.limits.cpu=300m" \
           --set "${IMAGE_KEY}.resources.limits.memory=512Mi" \
+          --set "${IMAGE_KEY}.livenessProbe.initialDelaySeconds=240" \
+          --set "${IMAGE_KEY}.readinessProbe.initialDelaySeconds=240" \
           --set "${IMAGE_KEY}.ingress.enabled=true" \
           --set "${IMAGE_KEY}.ingress.host=$HOST" \
           --wait \
-          --timeout 10m
+          --timeout 20m
 
       - name: Show result
         shell: bash
