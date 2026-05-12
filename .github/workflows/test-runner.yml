@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: [self-hosted, instance-20260511-133510]
+    runs-on: self-hosted
 
     steps:
       - name: Check runner
