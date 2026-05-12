@@ -1,0 +1,71 @@
+name: "developer_cleanup"
+
+on:
+  workflow_dispatch:
+    inputs:
+      developer_name:
+        description: "Tên developer cần cleanup"
+        required: true
+        default: "linh"
+
+      service:
+        description: "Service cần xóa"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - tax
+          - product
+          - storefront-ui
+
+      delete_namespace:
+        description: "Xóa luôn namespace nếu service = all?"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  cleanup:
+    name: Cleanup developer environment
+    runs-on: [self-hosted, yas-vps]
+
+    steps:
+      - name: Cleanup Helm release
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          SERVICE="${{ github.event.inputs.service }}"
+          NS="dev-${DEV_NAME}"
+
+          echo "Namespace: $NS"
+          echo "Service: $SERVICE"
+
+          if [ "$SERVICE" = "all" ]; then
+            helm uninstall "developer-${DEV_NAME}-tax" -n "$NS" || true
+            helm uninstall "developer-${DEV_NAME}-product" -n "$NS" || true
+            helm uninstall "developer-${DEV_NAME}-storefront-ui" -n "$NS" || true
+          else
+            helm uninstall "developer-${DEV_NAME}-${SERVICE}" -n "$NS" || true
+          fi
+
+      - name: Delete namespace
+        if: github.event.inputs.service == 'all' && github.event.inputs.delete_namespace == 'true'
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          NS="dev-${DEV_NAME}"
+
+          kubectl delete namespace "$NS" --ignore-not-found=true
+
+      - name: Verify cleanup
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          NS="dev-${DEV_NAME}"
+
+          kubectl get ns "$NS" || true
+          kubectl get pods -n "$NS" || true

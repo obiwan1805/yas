@@ -73,7 +73,11 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           min-coverage-overall: 70
           min-coverage-changed-files: 70
+<<<<<<< Updated upstream
           title: "Payment Coverage Report"
+=======
+          title: 'Payment Coverage Report'
+>>>>>>> Stashed changes
           update-comment: true
           continue-on-error: false
       - name: Enforce coverage gate (>= 70%)
