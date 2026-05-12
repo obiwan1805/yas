@@ -61,7 +61,7 @@ applicationConfig:
             issuer-uri: http://identity.yas.local.com/realms/Yas
 
     datasource:
-      url: "jdbc:postgresql://postgresql.postgres:5432/${spring.application.name}"
+      url: 
       username: ${POSTGRESQL_USERNAME}
       password: ${POSTGRESQL_PASSWORD}
     kafka:
