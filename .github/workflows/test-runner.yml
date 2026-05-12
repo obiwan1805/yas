@@ -1,0 +1,17 @@
+name: Test self-hosted runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: [self-hosted, yas-vps]
+
+    steps:
+      - name: Check runner
+        run: |
+          hostname
+          whoami
+          pwd
+          kubectl get pods -A
+          helm version
