@@ -14,7 +14,7 @@ ui:
 #  extraVolumeMounts:
 #    - name: storefront-env-production
 #      mountPath: /app/.env.production
-#      readOnly: true
+#      readOnly: truex
 #      subPath: .env.production
 
   service:

@@ -2,11 +2,11 @@ ui:
   image:
     tag: latest
   ingress:
-    enabled: true
+    enabled: false
     host: storefront-ui.dev.local.com
   extraEnvs:
     - name: API_BASE_PATH
-      value: http://api.storefront-bff.dev.local.com/api
+      value: http://storefront.dev.local.com/api
     - name: HOSTNAME
       value: "0.0.0.0"
   resources:

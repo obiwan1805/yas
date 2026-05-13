@@ -1,9 +1,8 @@
-backend:
-  image:
-    tag: latest
-  ingress:
-    enabled: true
-    host: api.swagger-ui.dev.local.com
+image:
+  tag: latest
+ingress:
+  enabled: true
+  host: api.swagger-ui.dev.local.com
   resources:
     requests:
       cpu: 10m

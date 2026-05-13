@@ -3,7 +3,7 @@ backend:
     tag: latest
   ingress:
     enabled: true
-    host: api.storefront-bff.dev.local.com
+    host: storefront.dev.local.com
   resources:
     requests:
       cpu: 10m
