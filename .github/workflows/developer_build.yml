@@ -167,15 +167,45 @@ jobs:
       - name: Copy shared config and secrets to developer namespace
         shell: bash
         run: |
-          echo "Copy shared ConfigMap and Secret from dev to $NAMESPACE"
+          echo "Copy shared ConfigMaps and Secrets from dev to $NAMESPACE"
 
-          kubectl get configmap yas-configuration-configmap -n dev -o yaml \
-            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
-            | kubectl apply -n "$NAMESPACE" -f -
+          kubectl get configmap -n dev -o json \
+            | jq '{
+                apiVersion: "v1",
+                kind: "List",
+                items: [
+                  .items[]
+                  | select(.metadata.name != "kube-root-ca.crt")
+                  | del(
+                      .metadata.uid,
+                      .metadata.resourceVersion,
+                      .metadata.creationTimestamp,
+                      .metadata.managedFields,
+                      .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
+                    )
+                  | .metadata.namespace = env.NAMESPACE
+                ]
+              }' \
+            | kubectl apply -f -
 
-          kubectl get secret yas-postgresql-credentials-secret -n dev -o yaml \
-            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
-            | kubectl apply -n "$NAMESPACE" -f -
+          kubectl get secret -n dev -o json \
+            | jq '{
+                apiVersion: "v1",
+                kind: "List",
+                items: [
+                  .items[]
+                  | select(.type != "kubernetes.io/service-account-token")
+                  | del(
+                      .metadata.uid,
+                      .metadata.resourceVersion,
+                      .metadata.creationTimestamp,
+                      .metadata.managedFields,
+                      .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
+                    )
+                  | .metadata.namespace = env.NAMESPACE
+                ]
+              }' \
+            | kubectl apply -f -
 
   deploy:
     name: Deploy selected service slot ${{ matrix.slot }}
