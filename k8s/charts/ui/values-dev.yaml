@@ -1,10 +1,18 @@
-backend:
-  image:
-    tag: latest
-  ingress:
-    enabled: true
-    host: api.ui.dev.local.com
-  resources:
-    requests:
-      cpu: 10m
-      memory: 128Mi
+image:
+  repository: ghcr.io/obiwan1805/yas-storefront
+  tag: latest
+
+ingress:
+  enabled: true
+  host: storefront-ui.dev.local.com
+
+extraEnvs:
+  - name: API_BASE_PATH
+    value: http://storefront.dev.local.com/api
+  - name: HOSTNAME
+    value: "0.0.0.0"
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 128Mi
