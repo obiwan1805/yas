@@ -154,6 +154,7 @@ jobs:
           -f "k8s/charts/$CHART/values.yaml" \
           --set "${IMAGE_KEY}.image.repository=$IMAGE" \
           --set "${IMAGE_KEY}.image.tag=$TAG" \
+          --set "${IMAGE_KEY}.service.type=NodePort" \
           --set "${IMAGE_KEY}.resources.requests.cpu=0" \
           --set "${IMAGE_KEY}.resources.requests.memory=64Mi" \
           --set "${IMAGE_KEY}.resources.limits.cpu=300m" \
@@ -185,3 +186,23 @@ jobs:
           echo ""
           echo "Access host:"
           echo "${{ github.event.inputs.service }}-${{ github.event.inputs.developer_name }}.dev.local.com"
+      - name: Show developer access information
+        shell: bash
+        run: |
+          SERVICE="${{ github.event.inputs.service }}"
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          HOST="${SERVICE}-${DEV_NAME}.dev.local.com"
+
+          NODE_IP="$(minikube ip)"
+          NODE_PORT="$(kubectl get svc "$SERVICE" -n "$NAMESPACE" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')"
+
+          echo "Developer access:"
+          echo "  Host: $HOST"
+          echo "  Node IP: $NODE_IP"
+          echo "  NodePort: $NODE_PORT"
+          echo ""
+          echo "Add to hosts file:"
+          echo "  $NODE_IP $HOST"
+          echo ""
+          echo "Open:"
+          echo "  http://$HOST:$NODE_PORT/tax"
