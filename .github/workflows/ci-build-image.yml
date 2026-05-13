@@ -1,27 +1,34 @@
-name: "03 CI - Build Docker image by branch"
+name: "CI - Build Docker image by branch"
 
 on:
   push:
     branches:
       - "**"
     paths:
-      - "tax/**"
+      - "backoffice-bff/**"
+      - "backoffice/**"
+      - "cart/**"
+      - "customer/**"
+      - "delivery/**"
+      - "inventory/**"
+      - "location/**"
+      - "media/**"
+      - "order/**"
+      - "payment/**"
+      - "payment-paypal/**"
       - "product/**"
+      - "promotion/**"
+      - "rating/**"
+      - "recommendation/**"
+      - "sampledata/**"
+      - "search/**"
+      - "storefront-bff/**"
       - "storefront/**"
-      - ".github/workflows/ci-build-image.yml"
-
-  workflow_dispatch:
-    inputs:
-      service:
-        description: "Service cần build"
-        required: true
-        default: "tax"
-        type: choice
-        options:
-          - tax
-          - product
-          - storefront-ui
-          - all
+      - "tax/**"
+      - "webhook/**"
+      - "common-library/**"
+      - "checkstyle/**"
+      - "pom.xml"
 
 env:
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -35,71 +42,220 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - service: tax
-            source_dir: tax
-            image_name: yas-tax
-            build_type: maven
+          - service: backoffice-bff
+            source_dir: backoffice-bff
+            image_name: yas-backoffice-bff
+            build_type: maven-f
+
+          - service: backoffice
+            source_dir: backoffice
+            image_name: yas-backoffice
+            build_type: node
+
+          - service: cart
+            source_dir: cart
+            image_name: yas-cart
+            build_type: maven-pl
+
+          - service: customer
+            source_dir: customer
+            image_name: yas-customer
+            build_type: maven-pl
+
+          - service: delivery
+            source_dir: delivery
+            image_name: yas-delivery
+            build_type: maven-pl
+
+          - service: inventory
+            source_dir: inventory
+            image_name: yas-inventory
+            build_type: maven-pl
+
+          - service: location
+            source_dir: location
+            image_name: yas-location
+            build_type: maven-pl
+
+          - service: media
+            source_dir: media
+            image_name: yas-media
+            build_type: maven-pl
+
+          - service: order
+            source_dir: order
+            image_name: yas-order
+            build_type: maven-pl
+
+          - service: payment
+            source_dir: payment
+            image_name: yas-payment
+            build_type: maven-pl
+
+          - service: payment-paypal
+            source_dir: payment-paypal
+            image_name: yas-payment-paypal
+            build_type: maven-pl
 
           - service: product
             source_dir: product
             image_name: yas-product
-            build_type: maven
+            build_type: maven-pl
+
+          - service: promotion
+            source_dir: promotion
+            image_name: yas-promotion
+            build_type: maven-pl
+
+          - service: rating
+            source_dir: rating
+            image_name: yas-rating
+            build_type: maven-pl
+
+          - service: recommendation
+            source_dir: recommendation
+            image_name: yas-recommendation
+            build_type: maven-pl
+
+          - service: sampledata
+            source_dir: sampledata
+            image_name: yas-sampledata
+            build_type: maven-pl
+
+          - service: search
+            source_dir: search
+            image_name: yas-search
+            build_type: maven-pl
+
+          - service: storefront-bff
+            source_dir: storefront-bff
+            image_name: yas-storefront-bff
+            build_type: maven-pl
 
           - service: storefront-ui
             source_dir: storefront
             image_name: yas-storefront
             build_type: node
 
+          - service: tax
+            source_dir: tax
+            image_name: yas-tax
+            build_type: maven-pl
+
+          - service: webhook
+            source_dir: webhook
+            image_name: yas-webhook
+            build_type: maven-pl
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Decide whether to build this service
         id: decide
         shell: bash
         run: |
+          set -euo pipefail
+
           SHOULD_BUILD="false"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            INPUT_SERVICE="${{ github.event.inputs.service }}"
-            if [ "$INPUT_SERVICE" = "all" ] || [ "$INPUT_SERVICE" = "${{ matrix.service }}" ]; then
-              SHOULD_BUILD="true"
-            fi
-          else
-            CHANGED_FILES="$(git diff --name-only HEAD~1 HEAD || true)"
-            echo "$CHANGED_FILES"
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
 
-            if echo "$CHANGED_FILES" | grep -q "^${{ matrix.source_dir }}/"; then
-              SHOULD_BUILD="true"
-            fi
+          if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -q '^0000000000000000000000000000000000000000$'; then
+            CHANGED_FILES="$(git diff-tree --no-commit-id --name-only -r "$AFTER" || true)"
+          else
+            CHANGED_FILES="$(git diff --name-only "$BEFORE" "$AFTER" || true)"
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Nếu đổi common/shared code thì build toàn bộ service.
+          if echo "$CHANGED_FILES" | grep -Eq '^(common-library/|checkstyle/|pom\.xml|\.github/workflows/actions/|\.github/workflows/ci-build-image\.yml)'; then
+            SHOULD_BUILD="true"
+          fi
+
+          # Nếu đổi trực tiếp folder service này thì build service này.
+          if echo "$CHANGED_FILES" | grep -q "^${{ matrix.source_dir }}/"; then
+            SHOULD_BUILD="true"
           fi
 
           echo "should_build=$SHOULD_BUILD" >> "$GITHUB_OUTPUT"
           echo "Should build ${{ matrix.service }}: $SHOULD_BUILD"
 
       - name: Set up JDK 21
-        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven'
+        if: steps.decide.outputs.should_build == 'true' && startsWith(matrix.build_type, 'maven')
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
+          cache: maven
 
-      - name: Build Maven service
-        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven'
+      - name: Set up Node.js 20
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: "${{ matrix.source_dir }}/package-lock.json"
+
+      - name: Build Maven module from root pom
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-pl'
         shell: bash
         run: |
-          mvn -B clean package -pl ${{ matrix.source_dir }} -am -DskipTests
+          mvn -B clean package -pl "${{ matrix.source_dir }}" -am -DskipTests
 
-      - name: Calculate image tag
+      - name: Build Maven standalone module
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-f'
+        shell: bash
+        run: |
+          mvn -B clean package -f "${{ matrix.source_dir }}" -DskipTests
+
+      - name: Build Node service
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'node'
+        shell: bash
+        working-directory: ${{ matrix.source_dir }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Calculate Docker tags
         if: steps.decide.outputs.should_build == 'true'
         id: vars
         shell: bash
         run: |
+          set -euo pipefail
+
           SHORT_SHA="$(git rev-parse --short=7 HEAD)"
+          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}"
+
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "Image tag: $SHORT_SHA"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            {
+              echo "tags<<EOF"
+              echo "$IMAGE:main"
+              echo "$IMAGE:latest"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+
+            echo "Branch is main. Image tags:"
+            echo "$IMAGE:main"
+            echo "$IMAGE:latest"
+          else
+            {
+              echo "tags<<EOF"
+              echo "$IMAGE:$SHORT_SHA"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+
+            echo "Branch is ${{ github.ref_name }}. Image tag:"
+            echo "$IMAGE:$SHORT_SHA"
+          fi
 
       - name: Login to Docker Hub
         if: steps.decide.outputs.should_build == 'true'
@@ -108,25 +264,68 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push Docker image
         if: steps.decide.outputs.should_build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.source_dir }}
           push: true
-          tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}:${{ steps.vars.outputs.short_sha }}
+          tags: ${{ steps.vars.outputs.tags }}
 
-      - name: Push main/latest tags
-        if: steps.decide.outputs.should_build == 'true' && github.ref_name == 'main'
+      - name: Run Maven tests from root pom
+        id: maven_test_pl
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-pl'
+        continue-on-error: true
         shell: bash
         run: |
-          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}"
-          TAG="${{ steps.vars.outputs.short_sha }}"
+          mvn -B test -pl "${{ matrix.source_dir }}" -am
 
-          docker pull "$IMAGE:$TAG"
-          docker tag "$IMAGE:$TAG" "$IMAGE:main"
-          docker tag "$IMAGE:$TAG" "$IMAGE:latest"
+      - name: Run Maven tests for standalone module
+        id: maven_test_f
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-f'
+        continue-on-error: true
+        shell: bash
+        run: |
+          mvn -B test -f "${{ matrix.source_dir }}"
 
-          docker push "$IMAGE:main"
-          docker push "$IMAGE:latest"
+      - name: Run Node tests
+        id: node_test
+        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'node'
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ matrix.source_dir }}
+        run: |
+          npm test --if-present
+
+      - name: Print CI summary
+        if: steps.decide.outputs.should_build == 'true'
+        shell: bash
+        run: |
+          echo "## CI result for ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "**Service:** ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "**Docker image tags:**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.vars.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          TEST_RESULT="not-run"
+
+          if [ "${{ matrix.build_type }}" = "maven-pl" ]; then
+            TEST_RESULT="${{ steps.maven_test_pl.outcome }}"
+          elif [ "${{ matrix.build_type }}" = "maven-f" ]; then
+            TEST_RESULT="${{ steps.maven_test_f.outcome }}"
+          elif [ "${{ matrix.build_type }}" = "node" ]; then
+            TEST_RESULT="${{ steps.node_test.outcome }}"
+          fi
+
+          echo "**Test result:** $TEST_RESULT" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Built service: ${{ matrix.service }}"
+          echo "Image tags:"
+          echo "${{ steps.vars.outputs.tags }}"
+          echo "Test result: $TEST_RESULT"
