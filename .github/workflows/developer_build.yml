@@ -8,8 +8,30 @@ on:
         required: true
         default: "linh"
 
-      service:
-        description: "Service cần deploy"
+      deploy_count:
+        description: "Muốn deploy bao nhiêu service?"
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+
+      ssh_user:
+        description: "SSH user developer dùng để tunnel"
+        required: true
+        default: "dev"
+
+      ssh_host:
+        description: "Public IP/domain của VPS"
+        required: true
+        default: "34.142.231.72"
+
+      slot1_service:
+        description: "Service #1"
         required: true
         default: "tax"
         type: choice
@@ -17,9 +39,109 @@ on:
           - tax
           - product
           - storefront-ui
+      slot1_mode:
+        description: "Service #1 deploy mode"
+        required: true
+        default: "branch"
+        type: choice
+        options:
+          - latest
+          - branch
+          - none
+      slot1_branch:
+        description: "Service #1 branch nếu mode = branch"
+        required: true
+        default: "dev_tax_service"
 
-      branch:
-        description: "Branch muốn deploy, ví dụ: dev_tax_service"
+      slot2_service:
+        description: "Service #2"
+        required: true
+        default: "product"
+        type: choice
+        options:
+          - tax
+          - product
+          - storefront-ui
+      slot2_mode:
+        description: "Service #2 deploy mode"
+        required: true
+        default: "latest"
+        type: choice
+        options:
+          - latest
+          - branch
+          - none
+      slot2_branch:
+        description: "Service #2 branch nếu mode = branch"
+        required: true
+        default: "main"
+
+      slot3_service:
+        description: "Service #3"
+        required: true
+        default: "storefront-ui"
+        type: choice
+        options:
+          - tax
+          - product
+          - storefront-ui
+      slot3_mode:
+        description: "Service #3 deploy mode"
+        required: true
+        default: "none"
+        type: choice
+        options:
+          - latest
+          - branch
+          - none
+      slot3_branch:
+        description: "Service #3 branch nếu mode = branch"
+        required: true
+        default: "main"
+
+      slot4_service:
+        description: "Service #4"
+        required: true
+        default: "tax"
+        type: choice
+        options:
+          - tax
+          - product
+          - storefront-ui
+      slot4_mode:
+        description: "Service #4 deploy mode"
+        required: true
+        default: "none"
+        type: choice
+        options:
+          - latest
+          - branch
+          - none
+      slot4_branch:
+        description: "Service #4 branch nếu mode = branch"
+        required: true
+        default: "main"
+
+      slot5_service:
+        description: "Service #5"
+        required: true
+        default: "product"
+        type: choice
+        options:
+          - tax
+          - product
+          - storefront-ui
+      slot5_mode:
+        description: "Service #5 deploy mode"
+        required: true
+        default: "none"
+        type: choice
+        options:
+          - latest
+          - branch
+          - none
+      slot5_branch:
+        description: "Service #5 branch nếu mode = branch"
         required: true
         default: "main"
 
@@ -27,39 +149,135 @@ env:
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
-  deploy:
-    name: Deploy developer environment
+  bootstrap:
+    name: Prepare developer namespace
     runs-on: self-hosted
 
     steps:
+      - name: Prepare namespace
+        shell: bash
+        run: |
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          NS="dev-${DEV_NAME}"
+
+          kubectl create namespace "$NS" --dry-run=client -o yaml | kubectl apply -f -
+
+          echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
+
+      - name: Copy shared config and secrets to developer namespace
+        shell: bash
+        run: |
+          echo "Copy shared ConfigMap and Secret from dev to $NAMESPACE"
+
+          kubectl get configmap yas-configuration-configmap -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
+
+          kubectl get secret yas-postgresql-credentials-secret -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
+
+  deploy:
+    name: Deploy selected service slot ${{ matrix.slot }}
+    needs: bootstrap
+    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        slot: [1, 2, 3, 4, 5]
+
+    steps:
+      - name: Select service slot
+        shell: bash
+        run: |
+          SLOT="${{ matrix.slot }}"
+          DEPLOY_COUNT="${{ github.event.inputs.deploy_count }}"
+
+          if [ "$SLOT" -gt "$DEPLOY_COUNT" ]; then
+            echo "Slot $SLOT is greater than deploy_count=$DEPLOY_COUNT. Skip."
+            echo "SKIP_SLOT=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          case "$SLOT" in
+            1)
+              SERVICE="${{ github.event.inputs.slot1_service }}"
+              MODE="${{ github.event.inputs.slot1_mode }}"
+              BRANCH="${{ github.event.inputs.slot1_branch }}"
+              ;;
+            2)
+              SERVICE="${{ github.event.inputs.slot2_service }}"
+              MODE="${{ github.event.inputs.slot2_mode }}"
+              BRANCH="${{ github.event.inputs.slot2_branch }}"
+              ;;
+            3)
+              SERVICE="${{ github.event.inputs.slot3_service }}"
+              MODE="${{ github.event.inputs.slot3_mode }}"
+              BRANCH="${{ github.event.inputs.slot3_branch }}"
+              ;;
+            4)
+              SERVICE="${{ github.event.inputs.slot4_service }}"
+              MODE="${{ github.event.inputs.slot4_mode }}"
+              BRANCH="${{ github.event.inputs.slot4_branch }}"
+              ;;
+            5)
+              SERVICE="${{ github.event.inputs.slot5_service }}"
+              MODE="${{ github.event.inputs.slot5_mode }}"
+              BRANCH="${{ github.event.inputs.slot5_branch }}"
+              ;;
+            *)
+              echo "Unknown slot: $SLOT"
+              exit 1
+              ;;
+          esac
+
+          if [ "$MODE" = "none" ]; then
+            echo "Slot $SLOT selected mode=none. Skip deploy."
+            echo "SKIP_SLOT=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "SKIP_SLOT=false" >> "$GITHUB_ENV"
+          echo "SERVICE=$SERVICE" >> "$GITHUB_ENV"
+          echo "DEPLOY_MODE=$MODE" >> "$GITHUB_ENV"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+          echo "Selected slot $SLOT: service=$SERVICE mode=$MODE branch=$BRANCH"
+
       - name: Checkout source code
+        if: env.SKIP_SLOT != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Resolve service config
+        if: env.SKIP_SLOT != 'true'
         id: config
         shell: bash
         run: |
-          SERVICE="${{ github.event.inputs.service }}"
+          SERVICE="$SERVICE"
 
           case "$SERVICE" in
             tax)
               echo "chart=tax" >> "$GITHUB_OUTPUT"
               echo "image_name=yas-tax" >> "$GITHUB_OUTPUT"
               echo "image_key=backend" >> "$GITHUB_OUTPUT"
+              echo "path=/tax" >> "$GITHUB_OUTPUT"
               ;;
 
             product)
               echo "chart=product" >> "$GITHUB_OUTPUT"
               echo "image_name=yas-product" >> "$GITHUB_OUTPUT"
               echo "image_key=backend" >> "$GITHUB_OUTPUT"
+              echo "path=/product" >> "$GITHUB_OUTPUT"
               ;;
 
             storefront-ui)
               echo "chart=storefront-ui" >> "$GITHUB_OUTPUT"
               echo "image_name=yas-storefront" >> "$GITHUB_OUTPUT"
               echo "image_key=ui" >> "$GITHUB_OUTPUT"
+              echo "path=/" >> "$GITHUB_OUTPUT"
               ;;
 
             *)
@@ -69,18 +287,25 @@ jobs:
           esac
 
       - name: Resolve branch commit SHA
+        if: env.SKIP_SLOT != 'true'
         id: tag
         shell: bash
         run: |
-          BRANCH="${{ github.event.inputs.branch }}"
+          BRANCH="$BRANCH"
 
-          git fetch origin "$BRANCH" --depth=1
-          SHORT_SHA="$(git rev-parse --short=7 origin/$BRANCH)"
+          if [ "$DEPLOY_MODE" = "latest" ]; then
+            SHORT_SHA="latest"
+            echo "Using latest image tag for service $SERVICE"
+          else
+            git fetch origin "$BRANCH" --depth=1
+            SHORT_SHA="$(git rev-parse --short=7 origin/$BRANCH)"
+            echo "Branch $BRANCH commit SHA: $SHORT_SHA"
+          fi
 
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "Branch $BRANCH commit SHA: $SHORT_SHA"
 
       - name: Check image exists on Docker Hub
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
           IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ steps.config.outputs.image_name }}"
@@ -95,6 +320,7 @@ jobs:
           }
 
       - name: Prepare namespace
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
           DEV_NAME="${{ github.event.inputs.developer_name }}"
@@ -105,6 +331,7 @@ jobs:
           echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
 
       - name: Build Helm chart dependencies
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
           CHART="${{ steps.config.outputs.chart }}"
@@ -116,24 +343,13 @@ jobs:
 
           echo "Chart dependencies:"
           ls -la "k8s/charts/$CHART/charts" || true
-      - name: Copy shared config and secrets to developer namespace
-        shell: bash
-        run: |
-          echo "Copy shared ConfigMap and Secret from dev to $NAMESPACE"
-
-          kubectl get configmap yas-configuration-configmap -n dev -o yaml \
-            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
-            | kubectl apply -n "$NAMESPACE" -f -
-
-          kubectl get secret yas-postgresql-credentials-secret -n dev -o yaml \
-            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
-            | kubectl apply -n "$NAMESPACE" -f -
 
       - name: Deploy service by Helm
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
           DEV_NAME="${{ github.event.inputs.developer_name }}"
-          SERVICE="${{ github.event.inputs.service }}"
+          SERVICE="$SERVICE"
           CHART="${{ steps.config.outputs.chart }}"
           IMAGE_KEY="${{ steps.config.outputs.image_key }}"
           IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ steps.config.outputs.image_name }}"
@@ -167,6 +383,7 @@ jobs:
           --timeout 20m
 
       - name: Show result
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
           echo "Namespace: $NAMESPACE"
@@ -185,24 +402,33 @@ jobs:
 
           echo ""
           echo "Access host:"
-          echo "${{ github.event.inputs.service }}-${{ github.event.inputs.developer_name }}.dev.local.com"
+          echo "$SERVICE-${{ github.event.inputs.developer_name }}.dev.local.com"
+
       - name: Show developer access information
+        if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
-          SERVICE="${{ github.event.inputs.service }}"
+          SERVICE="$SERVICE"
           DEV_NAME="${{ github.event.inputs.developer_name }}"
           HOST="${SERVICE}-${DEV_NAME}.dev.local.com"
 
           NODE_IP="$(minikube ip)"
           NODE_PORT="$(kubectl get svc "$SERVICE" -n "$NAMESPACE" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')"
+          APP_PATH="${{ steps.config.outputs.path }}"
+          SSH_USER="${{ github.event.inputs.ssh_user }}"
+          SSH_HOST="${{ github.event.inputs.ssh_host }}"
 
           echo "Developer access:"
+          echo "  Service: $SERVICE"
           echo "  Host: $HOST"
           echo "  Node IP: $NODE_IP"
           echo "  NodePort: $NODE_PORT"
           echo ""
-          echo "Add to hosts file:"
-          echo "  $NODE_IP $HOST"
+          echo "SSH tunnel command for developer:"
+          echo "  ssh -N -L $NODE_PORT:$NODE_IP:$NODE_PORT $SSH_USER@$SSH_HOST"
           echo ""
-          echo "Open:"
-          echo "  http://$HOST:$NODE_PORT/tax"
+          echo "Add to /etc/hosts on developer machine:"
+          echo "  127.0.0.1 $HOST"
+          echo ""
+          echo "Open after adding hosts file:"
+          echo "  http://$HOST:$NODE_PORT$APP_PATH"
