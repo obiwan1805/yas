@@ -59,6 +59,7 @@ applicationConfig:
         resourceserver:
           jwt:
             issuer-uri: http://identity.yas.local.com/realms/Yas
+            jwk-set-uri: http://keycloak-service.keycloak.svc.cluster.local:8080/realms/Yas/protocol/openid-connect/certs
 
     datasource:
       url: 
