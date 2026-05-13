@@ -9,7 +9,7 @@ on:
         default: "linh"
 
       deploy_count:
-        description: "Muốn deploy bao nhiêu service?"
+        description: "Muốn deploy bao nhiêu service? Demo thiếu CPU thì chọn 2"
         required: true
         default: "2"
         type: choice
@@ -167,45 +167,15 @@ jobs:
       - name: Copy shared config and secrets to developer namespace
         shell: bash
         run: |
-          echo "Copy shared ConfigMaps and Secrets from dev to $NAMESPACE"
+          echo "Copy shared ConfigMap and Secret from dev to $NAMESPACE"
 
-          kubectl get configmap -n dev -o json \
-            | jq '{
-                apiVersion: "v1",
-                kind: "List",
-                items: [
-                  .items[]
-                  | select(.metadata.name != "kube-root-ca.crt")
-                  | del(
-                      .metadata.uid,
-                      .metadata.resourceVersion,
-                      .metadata.creationTimestamp,
-                      .metadata.managedFields,
-                      .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
-                    )
-                  | .metadata.namespace = env.NAMESPACE
-                ]
-              }' \
-            | kubectl apply -f -
+          kubectl get configmap yas-configuration-configmap -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
 
-          kubectl get secret -n dev -o json \
-            | jq '{
-                apiVersion: "v1",
-                kind: "List",
-                items: [
-                  .items[]
-                  | select(.type != "kubernetes.io/service-account-token")
-                  | del(
-                      .metadata.uid,
-                      .metadata.resourceVersion,
-                      .metadata.creationTimestamp,
-                      .metadata.managedFields,
-                      .metadata.annotations."kubectl.kubernetes.io/last-applied-configuration"
-                    )
-                  | .metadata.namespace = env.NAMESPACE
-                ]
-              }' \
-            | kubectl apply -f -
+          kubectl get secret yas-postgresql-credentials-secret -n dev -o yaml \
+            | sed "s/namespace: dev/namespace: $NAMESPACE/" \
+            | kubectl apply -n "$NAMESPACE" -f -
 
   deploy:
     name: Deploy selected service slot ${{ matrix.slot }}
@@ -434,7 +404,7 @@ jobs:
           echo "Access host:"
           echo "$SERVICE-${{ github.event.inputs.developer_name }}.dev.local.com"
 
-      - name: Show developer access information
+      - name: Expose NodePort publicly and show developer access information
         if: env.SKIP_SLOT != 'true'
         shell: bash
         run: |
@@ -445,20 +415,103 @@ jobs:
           NODE_IP="$(minikube ip)"
           NODE_PORT="$(kubectl get svc "$SERVICE" -n "$NAMESPACE" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')"
           APP_PATH="${{ steps.config.outputs.path }}"
-          SSH_USER="${{ github.event.inputs.ssh_user }}"
-          SSH_HOST="${{ github.event.inputs.ssh_host }}"
 
-          echo "Developer access:"
+          # Reuse ssh_host input as the public host/IP of the VPS.
+          PUBLIC_HOST="${{ github.event.inputs.ssh_host }}"
+
+          if [ -z "$NODE_PORT" ]; then
+            echo "Cannot resolve NodePort for service $SERVICE in namespace $NAMESPACE"
+            kubectl get svc "$SERVICE" -n "$NAMESPACE" -o wide || true
+            exit 1
+          fi
+
+          if ! command -v socat >/dev/null 2>&1; then
+            echo "socat is not installed on VPS. Install once with:"
+            echo "  sudo apt update && sudo apt install -y socat"
+            exit 1
+          fi
+
+          mkdir -p /tmp/yas-nodeport-public
+          PID_FILE="/tmp/yas-nodeport-public/${NAMESPACE}-${SERVICE}-${NODE_PORT}.pid"
+          LOG_FILE="/tmp/yas-nodeport-public/${NAMESPACE}-${SERVICE}-${NODE_PORT}.log"
+
+          # Stop old forwarding process for the same service/port if it exists.
+          if [ -f "$PID_FILE" ]; then
+            OLD_PID="$(cat "$PID_FILE" || true)"
+            if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" >/dev/null 2>&1; then
+              echo "Stopping old socat process PID=$OLD_PID for $SERVICE:$NODE_PORT"
+              kill "$OLD_PID" || true
+            fi
+            rm -f "$PID_FILE"
+          fi
+
+          # If a previous socat is still listening on this port, stop it best-effort.
+          pkill -f "socat TCP-LISTEN:${NODE_PORT}" || true
+
+          # Start public forward on VPS public interface:
+          #   PUBLIC_HOST:NODE_PORT -> MINIKUBE_IP:NODE_PORT
+          # Unset RUNNER_TRACKING_ID so GitHub Actions does not kill this background process after job ends.
+          env -u RUNNER_TRACKING_ID nohup socat \
+            TCP-LISTEN:${NODE_PORT},fork,reuseaddr \
+            TCP:${NODE_IP}:${NODE_PORT} \
+            > "$LOG_FILE" 2>&1 &
+
+          SOCAT_PID="$!"
+          echo "$SOCAT_PID" > "$PID_FILE"
+
+          sleep 1
+
+          if ! kill -0 "$SOCAT_PID" >/dev/null 2>&1; then
+            echo "Failed to start socat for $SERVICE. Log:"
+            cat "$LOG_FILE" || true
+            exit 1
+          fi
+
+          PUBLIC_URL="http://${PUBLIC_HOST}:${NODE_PORT}${APP_PATH}"
+          DOMAIN_URL="http://${HOST}:${NODE_PORT}${APP_PATH}"
+
+          echo "Developer public access:"
           echo "  Service: $SERVICE"
-          echo "  Host: $HOST"
+          echo "  Namespace: $NAMESPACE"
           echo "  Node IP: $NODE_IP"
           echo "  NodePort: $NODE_PORT"
+          echo "  Public host: $PUBLIC_HOST"
+          echo "  Socat PID: $SOCAT_PID"
           echo ""
-          echo "SSH tunnel command for developer:"
-          echo "  ssh -N -L $NODE_PORT:$NODE_IP:$NODE_PORT $SSH_USER@$SSH_HOST"
+          echo "Public URL without hosts file:"
+          echo "  $PUBLIC_URL"
           echo ""
-          echo "Add to /etc/hosts on developer machine:"
-          echo "  127.0.0.1 $HOST"
+          echo "If teacher wants domain:port, add this to /etc/hosts or Windows hosts file:"
+          echo "  $PUBLIC_HOST $HOST"
           echo ""
           echo "Open after adding hosts file:"
-          echo "  http://$HOST:$NODE_PORT$APP_PATH"
+          echo "  $DOMAIN_URL"
+          echo ""
+          echo "Make sure VPS/cloud firewall allows TCP port $NODE_PORT"
+
+          {
+            echo "### Public access for $SERVICE"
+            echo ""
+            echo "**Public URL without hosts file:**"
+            echo "\`\`\`"
+            echo "$PUBLIC_URL"
+            echo "\`\`\`"
+            echo ""
+            echo "**Add to /etc/hosts or Windows hosts file if domain:port is required:**"
+            echo "\`\`\`"
+            echo "$PUBLIC_HOST $HOST"
+            echo "\`\`\`"
+            echo ""
+            echo "**Open after adding hosts:**"
+            echo "\`\`\`"
+            echo "$DOMAIN_URL"
+            echo "\`\`\`"
+            echo ""
+            echo "**Public forwarding process on VPS:**"
+            echo "\`\`\`"
+            echo "nohup socat TCP-LISTEN:${NODE_PORT},fork,reuseaddr TCP:${NODE_IP}:${NODE_PORT} > $LOG_FILE 2>&1 &"
+            echo "\`\`\`"
+            echo ""
+            echo "Remember to open TCP port \`$NODE_PORT\` in the cloud firewall."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
