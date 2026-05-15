@@ -8,3 +8,21 @@ backend:
     requests:
       cpu: 10m
       memory: 128Mi
+  livenessProbe:
+    periodSeconds: 10
+    failureThreshold: 12
+    successThreshold: 1
+    timeoutSeconds: 5
+    initialDelaySeconds: 60
+    httpGet:
+      path: /actuator/health/liveness
+      port: metric
+  readinessProbe:
+    periodSeconds: 10
+    failureThreshold: 12
+    successThreshold: 1
+    timeoutSeconds: 5
+    initialDelaySeconds: 30
+    httpGet:
+      path: /actuator/health/readiness
+      port: metric
