@@ -4,6 +4,10 @@ backend:
   ingress:
     enabled: true
     host: api.media.dev.local.com
+    extraHosts:
+      - host: api.yas.local.com
+        path: /media
+        pathType: Prefix
   resources:
     requests:
       cpu: 10m
