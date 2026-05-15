@@ -1,4 +1,5 @@
 image:
+  repository: ghcr.io/obiwan1805/yas-storefront
   tag: latest
 ingress:
   enabled: true
