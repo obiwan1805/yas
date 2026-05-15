@@ -1,17 +1,52 @@
 image:
-  repository: ghcr.io/obiwan1805/yas-storefront
   tag: latest
-
 ingress:
   enabled: true
+  className: nginx
   host: storefront-ui.dev.local.com
-
+  path: /
+  pathType: ImplementationSpecific
+  extraPaths:
+    - path: /api
+      pathType: Prefix
+      backend:
+        service:
+          name: storefront-bff
+          port:
+            number: 80
+    - path: /oauth2
+      pathType: Prefix
+      backend:
+        service:
+          name: storefront-bff
+          port:
+            number: 80
+    - path: /login
+      pathType: Prefix
+      backend:
+        service:
+          name: storefront-bff
+          port:
+            number: 80
+    - path: /logout
+      pathType: Prefix
+      backend:
+        service:
+          name: storefront-bff
+          port:
+            number: 80
+    - path: /authentication
+      pathType: Prefix
+      backend:
+        service:
+          name: storefront-bff
+          port:
+            number: 80
 extraEnvs:
   - name: API_BASE_PATH
     value: http://storefront.dev.local.com/api
   - name: HOSTNAME
     value: "0.0.0.0"
-
 resources:
   requests:
     cpu: 10m

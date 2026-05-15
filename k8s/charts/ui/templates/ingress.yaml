@@ -35,16 +35,17 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- with .Values.ingress }}
-    - host: {{ .host}}
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
+          {{- if .Values.ingress.extraPaths }}
+          {{- toYaml .Values.ingress.extraPaths | nindent 10 }}
+          {{- end }}
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
             backend:
               service:
                 name: {{ $fullName }}
                 port:
                   number: {{ $svcPort }}
-          {{- end }}
 {{- end }}
