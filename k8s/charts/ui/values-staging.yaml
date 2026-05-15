@@ -44,7 +44,7 @@ ingress:
             number: 80
 extraEnvs:
   - name: API_BASE_PATH
-    value: http://api.storefront-bff.staging.local.com/api
+    value: http://storefront-bff.staging.svc.cluster.local/api
   - name: HOSTNAME
     value: "0.0.0.0"
 resources:
