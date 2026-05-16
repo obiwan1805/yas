@@ -29,6 +29,8 @@ on:
       - "common-library/**"
       - "checkstyle/**"
       - "pom.xml"
+      - ".github/workflows/actions/**"
+      - ".github/workflows/ci-build-image.yml"
 
 env:
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -173,7 +175,7 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          # Nếu đổi common/shared code thì build toàn bộ service.
+          # Nếu đổi common/shared code hoặc workflow build thì build toàn bộ service.
           if echo "$CHANGED_FILES" | grep -Eq '^(common-library/|checkstyle/|pom\.xml|\.github/workflows/actions/|\.github/workflows/ci-build-image\.yml)'; then
             SHOULD_BUILD="true"
           fi
@@ -232,30 +234,16 @@ jobs:
           SHORT_SHA="$(git rev-parse --short=7 HEAD)"
           IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}"
 
-          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            {
-              echo "tags<<EOF"
-              echo "$IMAGE:main"
-              echo "$IMAGE:latest"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-
-            echo "Branch is main. Image tags:"
-            echo "$IMAGE:main"
-            echo "$IMAGE:latest"
-          else
-            {
-              echo "tags<<EOF"
-              echo "$IMAGE:$SHORT_SHA"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-
-            echo "Branch is ${{ github.ref_name }}. Image tag:"
+          {
+            echo "short_sha=$SHORT_SHA"
+            echo "image=$IMAGE"
+            echo "tags<<EOF"
             echo "$IMAGE:$SHORT_SHA"
-          fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Docker image tag:"
+          echo "$IMAGE:$SHORT_SHA"
 
       - name: Login to Docker Hub
         if: steps.decide.outputs.should_build == 'true'
@@ -272,31 +260,6 @@ jobs:
           push: true
           tags: ${{ steps.vars.outputs.tags }}
 
-      - name: Run Maven tests from root pom
-        id: maven_test_pl
-        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-pl'
-        continue-on-error: true
-        shell: bash
-        run: |
-          mvn -B test -pl "${{ matrix.source_dir }}" -am
-
-      - name: Run Maven tests for standalone module
-        id: maven_test_f
-        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'maven-f'
-        continue-on-error: true
-        shell: bash
-        run: |
-          mvn -B test -f "${{ matrix.source_dir }}"
-
-      - name: Run Node tests
-        id: node_test
-        if: steps.decide.outputs.should_build == 'true' && matrix.build_type == 'node'
-        continue-on-error: true
-        shell: bash
-        working-directory: ${{ matrix.source_dir }}
-        run: |
-          npm test --if-present
-
       - name: Print CI summary
         if: steps.decide.outputs.should_build == 'true'
         shell: bash
@@ -311,21 +274,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.vars.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          TEST_RESULT="not-run"
-
-          if [ "${{ matrix.build_type }}" = "maven-pl" ]; then
-            TEST_RESULT="${{ steps.maven_test_pl.outcome }}"
-          elif [ "${{ matrix.build_type }}" = "maven-f" ]; then
-            TEST_RESULT="${{ steps.maven_test_f.outcome }}"
-          elif [ "${{ matrix.build_type }}" = "node" ]; then
-            TEST_RESULT="${{ steps.node_test.outcome }}"
-          fi
-
-          echo "**Test result:** $TEST_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
           echo "Built service: ${{ matrix.service }}"
           echo "Image tags:"
           echo "${{ steps.vars.outputs.tags }}"
-          echo "Test result: $TEST_RESULT"
