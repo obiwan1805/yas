@@ -34,6 +34,87 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Cleanup public NodePort forwarding processes
+        shell: bash
+        run: |
+          set +e
+
+          DEV_NAME="${{ github.event.inputs.developer_name }}"
+          SERVICE="${{ github.event.inputs.service }}"
+          NS="dev-${DEV_NAME}"
+          PID_DIR="/tmp/yas-nodeport-public"
+
+          echo "Cleanup socat forwarding processes"
+          echo "Namespace: $NS"
+          echo "Service: $SERVICE"
+          echo "PID directory: $PID_DIR"
+
+          cleanup_pid_file() {
+            PID_FILE="$1"
+
+            [ -f "$PID_FILE" ] || return 0
+
+            PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+            LOG_FILE="${PID_FILE%.pid}.log"
+
+            echo "Found PID file: $PID_FILE"
+            echo "PID: $PID"
+
+            if [ -n "$PID" ] && kill -0 "$PID" >/dev/null 2>&1; then
+              echo "Stopping socat process PID=$PID"
+              kill "$PID" || true
+              sleep 1
+
+              if kill -0 "$PID" >/dev/null 2>&1; then
+                echo "Process PID=$PID still alive, force killing"
+                kill -9 "$PID" || true
+              fi
+            else
+              echo "PID is empty or process is not running"
+            fi
+
+            rm -f "$PID_FILE" "$LOG_FILE"
+          }
+
+          cleanup_service_forwarding() {
+            TARGET_SERVICE="$1"
+
+            echo ""
+            echo "Cleanup forwarding for service: $TARGET_SERVICE"
+
+            # Preferred cleanup path: use PID files created by developer_build.
+            for PID_FILE in "$PID_DIR"/"${NS}-${TARGET_SERVICE}-"*.pid; do
+              cleanup_pid_file "$PID_FILE"
+            done
+
+            # Fallback cleanup path: if Kubernetes Service still exists, resolve NodePort and kill matching socat.
+            NODE_PORT="$(kubectl get svc "$TARGET_SERVICE" -n "$NS" -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null || true)"
+
+            if [ -n "$NODE_PORT" ]; then
+              echo "Fallback cleanup by NodePort: $NODE_PORT"
+              pkill -f "socat TCP-LISTEN:${NODE_PORT}" || true
+            else
+              echo "No NodePort found for $TARGET_SERVICE in $NS"
+            fi
+          }
+
+          if [ "$SERVICE" = "all" ]; then
+            cleanup_service_forwarding "tax"
+            cleanup_service_forwarding "product"
+            cleanup_service_forwarding "storefront-ui"
+
+            # Extra safety: remove any remaining PID files for this namespace.
+            for PID_FILE in "$PID_DIR"/"${NS}-"*.pid; do
+              cleanup_pid_file "$PID_FILE"
+            done
+          else
+            cleanup_service_forwarding "$SERVICE"
+          fi
+
+          echo ""
+          echo "Remaining forwarding files:"
+          ls -la "$PID_DIR" 2>/dev/null || true
+
       - name: Cleanup Helm release
         shell: bash
         run: |
