@@ -9,7 +9,7 @@ on:
         default: "linh"
 
       deploy_count:
-        description: "Muốn deploy bao nhiêu service? Demo thiếu CPU thì chọn 2"
+        description: "Muốn deploy bao nhiêu service?"
         required: true
         default: "2"
         type: choice
