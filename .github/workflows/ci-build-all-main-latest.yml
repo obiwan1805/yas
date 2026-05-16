@@ -1,0 +1,211 @@
+name: "CI - Build all Docker images as main/latest"
+
+on:
+  workflow_dispatch:
+
+env:
+  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backoffice-bff
+            source_dir: backoffice-bff
+            image_name: yas-backoffice-bff
+            build_type: maven-f
+
+          - service: backoffice
+            source_dir: backoffice
+            image_name: yas-backoffice
+            build_type: node
+
+          - service: cart
+            source_dir: cart
+            image_name: yas-cart
+            build_type: maven-pl
+
+          - service: customer
+            source_dir: customer
+            image_name: yas-customer
+            build_type: maven-pl
+
+          - service: delivery
+            source_dir: delivery
+            image_name: yas-delivery
+            build_type: maven-pl
+
+          - service: inventory
+            source_dir: inventory
+            image_name: yas-inventory
+            build_type: maven-pl
+
+          - service: location
+            source_dir: location
+            image_name: yas-location
+            build_type: maven-pl
+
+          - service: media
+            source_dir: media
+            image_name: yas-media
+            build_type: maven-pl
+
+          - service: order
+            source_dir: order
+            image_name: yas-order
+            build_type: maven-pl
+
+          - service: payment
+            source_dir: payment
+            image_name: yas-payment
+            build_type: maven-pl
+
+          - service: payment-paypal
+            source_dir: payment-paypal
+            image_name: yas-payment-paypal
+            build_type: maven-pl
+
+          - service: product
+            source_dir: product
+            image_name: yas-product
+            build_type: maven-pl
+
+          - service: promotion
+            source_dir: promotion
+            image_name: yas-promotion
+            build_type: maven-pl
+
+          - service: rating
+            source_dir: rating
+            image_name: yas-rating
+            build_type: maven-pl
+
+          - service: recommendation
+            source_dir: recommendation
+            image_name: yas-recommendation
+            build_type: maven-pl
+
+          - service: sampledata
+            source_dir: sampledata
+            image_name: yas-sampledata
+            build_type: maven-pl
+
+          - service: search
+            source_dir: search
+            image_name: yas-search
+            build_type: maven-pl
+
+          - service: storefront-bff
+            source_dir: storefront-bff
+            image_name: yas-storefront-bff
+            build_type: maven-pl
+
+          - service: storefront-ui
+            source_dir: storefront
+            image_name: yas-storefront
+            build_type: node
+
+          - service: tax
+            source_dir: tax
+            image_name: yas-tax
+            build_type: maven-pl
+
+          - service: webhook
+            source_dir: webhook
+            image_name: yas-webhook
+            build_type: maven-pl
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        if: startsWith(matrix.build_type, 'maven')
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set up Node.js 20
+        if: matrix.build_type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: "${{ matrix.source_dir }}/package-lock.json"
+
+      - name: Build Maven module from root pom
+        if: matrix.build_type == 'maven-pl'
+        shell: bash
+        run: |
+          mvn -B clean package -pl "${{ matrix.source_dir }}" -am -DskipTests
+
+      - name: Build Maven standalone module
+        if: matrix.build_type == 'maven-f'
+        shell: bash
+        run: |
+          mvn -B clean package -f "${{ matrix.source_dir }}" -DskipTests
+
+      - name: Build Node service
+        if: matrix.build_type == 'node'
+        shell: bash
+        working-directory: ${{ matrix.source_dir }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Calculate Docker tags
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}"
+
+          {
+            echo "tags<<EOF"
+            echo "$IMAGE:main"
+            echo "$IMAGE:latest"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Image tags:"
+          echo "$IMAGE:main"
+          echo "$IMAGE:latest"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.source_dir }}
+          push: true
+          tags: ${{ steps.vars.outputs.tags }}
+
+      - name: Print CI summary
+        shell: bash
+        run: |
+          echo "## Manual build result for ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "**Service:** ${{ matrix.service }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "**Docker image tags:**" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.vars.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Built service: ${{ matrix.service }}"
+          echo "Image tags:"
+          echo "${{ steps.vars.outputs.tags }}"
