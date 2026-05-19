@@ -1,5 +1,18 @@
 image:
   tag: v1.0.0
+baseUrl: /swagger-ui
+urls: "[{ url: 'http://api.product.staging.local.com/v3/api-docs', name: 'Product' },
+      { url: 'http://api.media.staging.local.com/v3/api-docs', name: 'Media' },
+      { url: 'http://api.customer.staging.local.com/v3/api-docs', name: 'Customer' }, 
+      { url: 'http://api.cart.staging.local.com/v3/api-docs', name: 'Cart'},
+      { url: 'http://api.rating.staging.local.com/v3/api-docs', name: 'Rating' }, 
+      { url: 'http://api.order.staging.local.com/v3/api-docs', name: 'Order'},
+      { url: 'http://api.payment.staging.local.com/v3/api-docs', name: 'Payment'},
+      { url: 'http://api.location.staging.local.com/v3/api-docs', name: 'Location'}, 
+      { url: 'http://api.inventory.staging.local.com/v3/api-docs', name: 'Inventory'},
+      { url: 'http://api.tax.staging.local.com/v3/api-docs', name: 'Tax' },
+      { url: 'http://api.promotion.staging.local.com/v3/api-docs', name: 'Promotion'},
+      { url: 'http://api.search.staging.local.com/v3/api-docs', name: 'Search'}]"
 ingress:
   enabled: true
   host: api.swagger-ui.staging.local.com
