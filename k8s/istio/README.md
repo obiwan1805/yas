@@ -66,17 +66,17 @@ kubectl get pods -n istio-system
 
 ## 3. Install Observability Add-ons
 
-Prometheus is required by Kiali for metrics. Install both from the official Istio samples:
+Prometheus is required by Kiali for metrics. Manage both add-ons with Argo CD so they stay in sync with Git:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/samples/addons/prometheus.yaml
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/samples/addons/kiali.yaml
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/samples/addons/grafana.yaml
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.21/samples/addons/jaeger.yaml
+kubectl apply -f k8s/argocd/istio-addons.yaml
+
+# Watch Argo CD create the add-on resources
+kubectl get applications -n argocd istio-prometheus istio-kiali
 
 # Wait for add-ons to be ready
-kubectl rollout status deployment/kiali -n istio-system
 kubectl rollout status deployment/prometheus -n istio-system
+kubectl rollout status deployment/kiali -n istio-system
 ```
 
 Open Kiali:
@@ -381,3 +381,4 @@ kubectl rollout restart deployment -n ingress-nginx
 | `authz-allow-policies.yaml` | Per-service allow rules based on communication map |
 | `virtual-services.yaml` | Retry (3x, 2s) + timeout config for all active services |
 | `fault-injection.yaml` | **Test-only** — 50% 500 faults into product; delete after T4 test |
+| `../argocd/istio-addons.yaml` | Argo CD Applications for Istio Prometheus and Kiali add-ons |
