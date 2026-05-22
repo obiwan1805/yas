@@ -1,0 +1,110 @@
+# ============================================================
+# PeerAuthentication — mTLS Policy for YAS Service Mesh
+# ============================================================
+# Enforce STRICT mTLS for all workloads inside the dev namespace.
+# Infrastructure namespaces (postgres, kafka, keycloak) have no
+# Istio sidecar and MUST remain PERMISSIVE so that plain-text
+# connections from those pods are not blocked.
+# ============================================================
+
+# --- STRICT mTLS for the entire dev namespace ---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: dev
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# --- BFF services: port 80 accepts plain-text from nginx ingress ---
+# storefront-bff and backoffice-bff sit behind nginx-ingress which
+# is outside the mesh. Allow PERMISSIVE on port 80 so the ingress
+# can still route to them, while all pod-to-pod calls remain mTLS.
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: storefront-bff-ingress-permissive
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storefront-bff
+  portLevelMtls:
+    80:
+      mode: PERMISSIVE
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: backoffice-bff-ingress-permissive
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backoffice-bff
+  portLevelMtls:
+    80:
+      mode: PERMISSIVE
+
+---
+# --- Frontend UIs: PERMISSIVE on port 80 (served to browsers via ingress) ---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: storefront-ui-ingress-permissive
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storefront-ui
+  portLevelMtls:
+    80:
+      mode: PERMISSIVE
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: backoffice-ui-ingress-permissive
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backoffice-ui
+  portLevelMtls:
+    80:
+      mode: PERMISSIVE
+
+---
+# --- Infrastructure namespaces: PERMISSIVE (no Istio sidecar) ---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: permissive-infra
+  namespace: postgres
+spec:
+  mtls:
+    mode: PERMISSIVE
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: permissive-infra
+  namespace: kafka
+spec:
+  mtls:
+    mode: PERMISSIVE
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: permissive-infra
+  namespace: keycloak
+spec:
+  mtls:
+    mode: PERMISSIVE

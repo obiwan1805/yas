@@ -1,0 +1,92 @@
+# ============================================================
+# DestinationRule — Disable mTLS for Infrastructure Services
+# ============================================================
+# Infrastructure services (PostgreSQL, Kafka, Keycloak,
+# OpenTelemetry Collector) run WITHOUT Istio sidecars.
+# When a sidecar-injected pod in dev calls these services,
+# Envoy must send plain TCP/HTTP (tls.mode: DISABLE) instead
+# of the ISTIO_MUTUAL that mesh-wide-mtls destination rule
+# would otherwise enforce.
+#
+# These rules live in the dev namespace and are exported
+# only within dev (exportTo: ".").
+# ============================================================
+
+# --- PostgreSQL (Zalando postgres-operator) ---
+# Service: postgresql.postgres.svc.cluster.local:5432
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: postgresql-disable-tls
+  namespace: dev
+spec:
+  host: postgresql.postgres.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  exportTo:
+  - "."
+
+---
+# --- Kafka bootstrap (Strimzi) ---
+# Service: kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: kafka-bootstrap-disable-tls
+  namespace: dev
+spec:
+  host: kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  exportTo:
+  - "."
+
+---
+# --- Kafka brokers (Strimzi) ---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: kafka-brokers-disable-tls
+  namespace: dev
+spec:
+  host: kafka-cluster-kafka-brokers.kafka.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  exportTo:
+  - "."
+
+---
+# --- Keycloak (Keycloak Operator v2) ---
+# Service: keycloak-service.keycloak.svc.cluster.local:8080
+# Identity endpoint used by all backend services for JWT validation.
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: keycloak-disable-tls
+  namespace: dev
+spec:
+  host: keycloak-service.keycloak.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  exportTo:
+  - "."
+
+---
+# --- OpenTelemetry Collector ---
+# Service: opentelemetry-collector.observability.svc.cluster.local:4318
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: otel-collector-disable-tls
+  namespace: dev
+spec:
+  host: opentelemetry-collector.observability.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  exportTo:
+  - "."

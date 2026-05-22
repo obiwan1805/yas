@@ -1,0 +1,372 @@
+# ============================================================
+# AuthorizationPolicy — Per-Service Allow Rules for YAS
+# ============================================================
+# Authorization matrix implemented below.
+# Organised one policy per DESTINATION SERVICE for clarity.
+#
+# Service principals follow the SPIFFE format:
+#   cluster.local/ns/<namespace>/sa/<serviceaccount>
+#
+# Service accounts are named identically to their Helm
+# fullnameOverride (e.g. cart → sa/cart, product → sa/product).
+#
+# Communication map:
+#   storefront-ui  → storefront-bff
+#   storefront-bff → product, cart, customer, order, tax, search, media
+#   backoffice-ui  → backoffice-bff
+#   backoffice-bff → product, inventory, order, customer, media, tax
+#   product        → media, tax, search
+#   cart           → product, tax
+#   order          → cart, product, customer, tax, inventory
+#   inventory      → product
+#   tax            → (none)
+#   search         → (none)
+#   media          → (none)
+#
+# payment and payment-paypal are excluded (skip-reconcile /
+# CrashLoopBackOff — see apps-dev.yaml annotations).
+# ============================================================
+
+# ---- storefront-bff -----------------------------------------
+# Receives calls from: storefront-ui (server-side rendering)
+# Also receives traffic from nginx-ingress (port 80 is PERMISSIVE
+# via PeerAuthentication — see peer-authentication.yaml).
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-storefront-bff
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storefront-bff
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-ui"
+
+---
+# ---- backoffice-bff -----------------------------------------
+# Receives calls from: backoffice-ui (server-side rendering)
+# Also receives traffic from nginx-ingress (port 80 is PERMISSIVE).
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-backoffice-bff
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backoffice-bff
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-ui"
+
+---
+# ---- product ------------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET /api/products*
+#   backoffice-bff → GET/PUT/POST *
+#   cart           → GET *
+#   order          → GET *
+#   inventory      → GET *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-product
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: product
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/products*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+    to:
+    - operation:
+        methods: ["GET", "PUT", "POST", "DELETE", "PATCH"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/cart"
+        - "cluster.local/ns/dev/sa/order"
+        - "cluster.local/ns/dev/sa/inventory"
+    to:
+    - operation:
+        methods: ["GET"]
+
+---
+# ---- cart ---------------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET/POST /api/carts*
+#   order          → GET/DELETE *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-cart
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cart
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/carts*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/order"
+    to:
+    - operation:
+        methods: ["GET", "DELETE"]
+
+---
+# ---- customer -----------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET /api/customers*
+#   backoffice-bff → GET/PUT/POST/DELETE *
+#   order          → GET *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-customer
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: customer
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/customers*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+    to:
+    - operation:
+        methods: ["GET", "PUT", "POST", "DELETE", "PATCH"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/order"
+    to:
+    - operation:
+        methods: ["GET"]
+
+---
+# ---- order --------------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET/POST /api/orders*
+#   backoffice-bff → GET/PUT *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-order
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET", "POST"]
+        paths: ["/api/orders*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+    to:
+    - operation:
+        methods: ["GET", "PUT", "POST", "PATCH"]
+
+---
+# ---- inventory ----------------------------------------------
+# Receives calls from:
+#   backoffice-bff → GET/PUT *
+#   order          → PUT *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-inventory
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inventory
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+    to:
+    - operation:
+        methods: ["GET", "PUT", "POST", "PATCH"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/order"
+    to:
+    - operation:
+        methods: ["GET", "PUT"]
+
+---
+# ---- tax ----------------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET /api/taxes*
+#   backoffice-bff → GET *
+#   product        → GET *
+#   cart           → GET *
+#   order          → GET *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-tax
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tax
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/taxes*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+        - "cluster.local/ns/dev/sa/product"
+        - "cluster.local/ns/dev/sa/cart"
+        - "cluster.local/ns/dev/sa/order"
+    to:
+    - operation:
+        methods: ["GET"]
+
+---
+# ---- search -------------------------------------------------
+# Receives calls from:
+#   storefront-bff → GET /api/search*
+#   product        → GET *
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-search
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: search
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/search*"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/product"
+    to:
+    - operation:
+        methods: ["GET"]
+
+---
+# ---- media --------------------------------------------------
+# Receives calls from:
+#   product        → GET *
+#   storefront-bff → GET *  (product images in storefront)
+#   backoffice-bff → GET/PUT/POST/DELETE *  (media management)
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-media
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: media
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/product"
+        - "cluster.local/ns/dev/sa/storefront-bff"
+    to:
+    - operation:
+        methods: ["GET"]
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/dev/sa/backoffice-bff"
+    to:
+    - operation:
+        methods: ["GET", "PUT", "POST", "DELETE", "PATCH"]
+
+---
+# ---- health-check allow for Kubernetes probes ---------------
+# Kubernetes liveness/readiness probes come from the kubelet on
+# the node, NOT from within the mesh. Istio 1.9+ automatically
+# rewrites probe requests through the Envoy sidecar so they do
+# not need a separate AuthorizationPolicy. If probes still fail
+# after applying deny-all, enable this policy by removing the
+# comment marker below.
+#
+# apiVersion: security.istio.io/v1beta1
+# kind: AuthorizationPolicy
+# metadata:
+#   name: allow-health-checks
+#   namespace: dev
+# spec:
+#   action: ALLOW
+#   rules:
+#   - to:
+#     - operation:
+#         paths: ["/actuator/health*"]
+#         methods: ["GET"]

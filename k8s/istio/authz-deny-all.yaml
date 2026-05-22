@@ -1,0 +1,19 @@
+# ============================================================
+# AuthorizationPolicy — Default Deny-All for dev namespace
+# ============================================================
+# An AuthorizationPolicy with an empty spec matches ALL workloads
+# in the namespace and DENIES all traffic by default.
+# Apply authz-allow-policies.yaml IMMEDIATELY after this file
+# to avoid a service outage window.
+#
+# Deploy order:
+#   kubectl apply -f k8s/istio/authz-deny-all.yaml
+#   kubectl apply -f k8s/istio/authz-allow-policies.yaml
+# ============================================================
+
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: dev
+spec: {}

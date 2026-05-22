@@ -1,0 +1,55 @@
+# ============================================================
+# VirtualService — Fault Injection (TEST ONLY)
+# ============================================================
+# Injects 50% HTTP 500 responses into the product service.
+# Used to verify that the retry policy in virtual-services.yaml
+# is working correctly — most requests to product should still
+# succeed because storefront-bff retries up to 3 times.
+#
+# USAGE:
+#   # Apply fault injection
+#   kubectl apply -f k8s/istio/fault-injection.yaml
+#
+#   # Observe retries via Kiali or curl loop
+#   for i in $(seq 1 20); do
+#     kubectl exec -n dev \
+#       $(kubectl get pod -n dev -l app.kubernetes.io/name=storefront-bff \
+#         -o jsonpath='{.items[0].metadata.name}') \
+#       -- curl -s -o /dev/null -w "%{http_code}\n" \
+#            http://product/api/products
+#   done
+#   # Expected: mostly 200s (retries rescue ~87% of requests)
+#
+#   # Remove fault injection after testing
+#   kubectl delete -f k8s/istio/fault-injection.yaml
+#
+# WARNING: This overrides virtual-services.yaml for the product
+#          host. Delete this resource before running production tests.
+# ============================================================
+
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: product-fault
+  namespace: dev
+  annotations:
+    # Reminder: this is a test-only resource — delete after use
+    purpose: "fault-injection-test"
+spec:
+  hosts:
+  - product
+  http:
+  - fault:
+      abort:
+        httpStatus: 500
+        percentage:
+          value: 50
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: "5xx,gateway-error,connect-failure,retriable-4xx"
+    route:
+    - destination:
+        host: product
+        port:
+          number: 80
