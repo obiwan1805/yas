@@ -216,58 +216,6 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: payment-dev
-  namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/skip-reconcile: "true" # Disabled: CrashLoopBackOff (lỗi image gốc)
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/obiwan1805/yas.git
-    targetRevision: HEAD
-    path: k8s/charts/payment
-    helm:
-      valueFiles:
-      - values.yaml
-      - values-dev.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: dev
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: payment-paypal-dev
-  namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/skip-reconcile: "true" # Disabled: CrashLoopBackOff (lỗi JAR manifest)
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/obiwan1805/yas.git
-    targetRevision: HEAD
-    path: k8s/charts/payment-paypal
-    helm:
-      valueFiles:
-      - values.yaml
-      - values-dev.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: dev
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: product-dev
   namespace: argocd
   finalizers:
@@ -347,32 +295,6 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: recommendation-dev
-  namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/skip-reconcile: "true" # Disabled: Gợi ý - không cần cho demo
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/obiwan1805/yas.git
-    targetRevision: HEAD
-    path: k8s/charts/recommendation
-    helm:
-      valueFiles:
-      - values.yaml
-      - values-dev.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: dev
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: sampledata-dev
   namespace: argocd
   finalizers:
@@ -393,33 +315,6 @@ spec:
     server: https://kubernetes.default.svc
     namespace: dev
   syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: search-dev
-  namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/obiwan1805/yas.git
-    targetRevision: HEAD
-    path: k8s/charts/search
-    helm:
-      valueFiles:
-      - values.yaml
-      - values-dev.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: dev
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
     syncOptions:
     - CreateNamespace=true
 ---
@@ -528,33 +423,6 @@ spec:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-    - CreateNamespace=true
----
-
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: webhook-dev
-  namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/skip-reconcile: "true" # Disabled: Webhook - không cần cho demo
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/obiwan1805/yas.git
-    targetRevision: HEAD
-    path: k8s/charts/webhook
-    helm:
-      valueFiles:
-      - values.yaml
-      - values-dev.yaml
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: dev
-  syncPolicy:
     syncOptions:
     - CreateNamespace=true
 ---
