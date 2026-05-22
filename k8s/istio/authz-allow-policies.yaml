@@ -351,22 +351,16 @@ spec:
 
 ---
 # ---- health-check allow for Kubernetes probes ---------------
-# Kubernetes liveness/readiness probes come from the kubelet on
-# the node, NOT from within the mesh. Istio 1.9+ automatically
-# rewrites probe requests through the Envoy sidecar so they do
-# not need a separate AuthorizationPolicy. If probes still fail
-# after applying deny-all, enable this policy by removing the
-# comment marker below.
-#
-# apiVersion: security.istio.io/v1beta1
-# kind: AuthorizationPolicy
-# metadata:
-#   name: allow-health-checks
-#   namespace: dev
-# spec:
-#   action: ALLOW
-#   rules:
-#   - to:
-#     - operation:
-#         paths: ["/actuator/health*"]
-#         methods: ["GET"]
+# Enable when pods stay 1/2 or CrashLoop after deny-all (probe 403).
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-health-checks
+  namespace: dev
+spec:
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        paths: ["/actuator/health*"]
+        methods: ["GET"]

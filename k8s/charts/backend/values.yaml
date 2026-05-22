@@ -88,9 +88,18 @@ lifecycle:
 
 terminationGracePeriodSeconds: 45
 
+# Spring Boot + Istio sidecar on Minikube can take 3–5 minutes to become healthy.
+startupProbe:
+  periodSeconds: 10
+  failureThreshold: 36
+  successThreshold: 1
+  httpGet:
+    path: /actuator/health/liveness
+    port: metric
+
 livenessProbe:
   periodSeconds: 10
-  failureThreshold: 12
+  failureThreshold: 6
   successThreshold: 1
   httpGet:
     path: /actuator/health/liveness
@@ -98,7 +107,7 @@ livenessProbe:
 
 readinessProbe:
   periodSeconds: 10
-  failureThreshold: 12
+  failureThreshold: 6
   successThreshold: 1
   httpGet:
     path: /actuator/health/readiness
