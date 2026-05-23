@@ -188,6 +188,7 @@ jobs:
           set -euo pipefail
 
           SHOULD_BUILD="false"
+          SHOULD_UPDATE_VALUES="false"
 
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.sha }}"
@@ -206,13 +207,17 @@ jobs:
             SHOULD_BUILD="true"
           fi
 
-          # Nếu đổi trực tiếp folder service này thì build service này.
+          # Nếu đổi trực tiếp folder service này thì build service này
+          # và chỉ service này mới được update file k8s/charts/<chart_dir>/values-dev.yaml.
           if echo "$CHANGED_FILES" | grep -q "^${{ matrix.source_dir }}/"; then
             SHOULD_BUILD="true"
+            SHOULD_UPDATE_VALUES="true"
           fi
 
           echo "should_build=$SHOULD_BUILD" >> "$GITHUB_OUTPUT"
+          echo "should_update_values=$SHOULD_UPDATE_VALUES" >> "$GITHUB_OUTPUT"
           echo "Should build ${{ matrix.service }}: $SHOULD_BUILD"
+          echo "Should update values for ${{ matrix.service }}: $SHOULD_UPDATE_VALUES"
 
       - name: Set up JDK 21
         if: steps.decide.outputs.should_build == 'true' && startsWith(matrix.build_type, 'maven')
@@ -297,7 +302,7 @@ jobs:
           tags: ${{ steps.vars.outputs.tags }}
 
       - name: Update values-dev.yaml image tag
-        if: steps.decide.outputs.should_build == 'true' && github.ref == 'refs/heads/main'
+        if: steps.decide.outputs.should_build == 'true' && steps.decide.outputs.should_update_values == 'true' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
