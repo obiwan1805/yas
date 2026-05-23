@@ -32,8 +32,13 @@ on:
       - ".github/workflows/actions/**"
       - ".github/workflows/ci-build-image.yml"
 
+permissions:
+  contents: write
+  packages: write
+
 env:
-  DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
+  GHCR_NAMESPACE: obiwan1805
+  VALUES_FILE: values-dev.yaml
 
 jobs:
   build:
@@ -232,25 +237,35 @@ jobs:
           set -euo pipefail
 
           SHORT_SHA="$(git rev-parse --short=7 HEAD)"
-          IMAGE="docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image_name }}"
+          IMAGE="ghcr.io/${{ env.GHCR_NAMESPACE }}/${{ matrix.image_name }}"
 
           {
             echo "short_sha=$SHORT_SHA"
             echo "image=$IMAGE"
             echo "tags<<EOF"
             echo "$IMAGE:$SHORT_SHA"
+
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "$IMAGE:main"
+            fi
+
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Docker image tag:"
+          echo "Docker image tags:"
           echo "$IMAGE:$SHORT_SHA"
 
-      - name: Login to Docker Hub
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "$IMAGE:main"
+          fi
+
+      - name: Login to GHCR
         if: steps.decide.outputs.should_build == 'true'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         if: steps.decide.outputs.should_build == 'true'
@@ -259,6 +274,48 @@ jobs:
           context: ./${{ matrix.source_dir }}
           push: true
           tags: ${{ steps.vars.outputs.tags }}
+
+      - name: Update values-dev.yaml image tag
+        if: steps.decide.outputs.should_build == 'true' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VALUES_KEY="${{ matrix.source_dir }}"
+          TAG="${{ steps.vars.outputs.short_sha }}"
+          export VALUES_KEY TAG
+
+          curl -fsSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /tmp/yq
+          chmod +x /tmp/yq
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            /tmp/yq -i '.[strenv(VALUES_KEY)].image.tag = strenv(TAG)' "${{ env.VALUES_FILE }}"
+
+            if git diff --quiet -- "${{ env.VALUES_FILE }}"; then
+              echo "No values change for ${VALUES_KEY}"
+              exit 0
+            fi
+
+            git add "${{ env.VALUES_FILE }}"
+            git commit -m "chore(cd): update ${VALUES_KEY} image tag to ${TAG} [skip ci]"
+
+            if git push origin HEAD:main; then
+              echo "Updated ${{ env.VALUES_FILE }} for ${VALUES_KEY} => ${TAG}"
+              exit 0
+            fi
+
+            echo "Push failed, retrying..."
+            sleep $((attempt * 2))
+          done
+
+          echo "Failed to push values update after retries"
+          exit 1
 
       - name: Print CI summary
         if: steps.decide.outputs.should_build == 'true'
