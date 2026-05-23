@@ -1,6 +1,6 @@
 ui:
   image:
-    tag: 3e6cc03
+    tag: latest
   ingress:
     enabled: false
     host: storefront-ui.dev.local.com
