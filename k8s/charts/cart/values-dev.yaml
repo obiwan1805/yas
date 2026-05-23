@@ -1,6 +1,6 @@
 backend:
   image:
-    tag: "7629322"
+    tag: "6ab6dd3"
   ingress:
     enabled: true
     host: api.cart.dev.local.com
