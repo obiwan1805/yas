@@ -1,6 +1,6 @@
 ui:
   image:
-    tag: latest
+    tag: 3e6cc03
   ingress:
     enabled: true
     host: backoffice-ui.dev.local.com
