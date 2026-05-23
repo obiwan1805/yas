@@ -38,7 +38,6 @@ permissions:
 
 env:
   GHCR_NAMESPACE: obiwan1805
-  VALUES_FILE: values-dev.yaml
 
 jobs:
   build:
@@ -53,112 +52,134 @@ jobs:
             source_dir: backoffice-bff
             image_name: yas-backoffice-bff
             build_type: maven-f
+            chart_dir: backoffice-bff
 
           - service: backoffice
             source_dir: backoffice
             image_name: yas-backoffice
             build_type: node
+            chart_dir: backoffice-ui
 
           - service: cart
             source_dir: cart
             image_name: yas-cart
             build_type: maven-pl
+            chart_dir: cart
 
           - service: customer
             source_dir: customer
             image_name: yas-customer
             build_type: maven-pl
+            chart_dir: customer
 
           - service: delivery
             source_dir: delivery
             image_name: yas-delivery
             build_type: maven-pl
+            chart_dir: delivery
 
           - service: inventory
             source_dir: inventory
             image_name: yas-inventory
             build_type: maven-pl
+            chart_dir: inventory
 
           - service: location
             source_dir: location
             image_name: yas-location
             build_type: maven-pl
+            chart_dir: location
 
           - service: media
             source_dir: media
             image_name: yas-media
             build_type: maven-pl
+            chart_dir: media
 
           - service: order
             source_dir: order
             image_name: yas-order
             build_type: maven-pl
+            chart_dir: order
 
           - service: payment
             source_dir: payment
             image_name: yas-payment
             build_type: maven-pl
+            chart_dir: payment
 
           - service: payment-paypal
             source_dir: payment-paypal
             image_name: yas-payment-paypal
             build_type: maven-pl
+            chart_dir: payment-paypal
 
           - service: product
             source_dir: product
             image_name: yas-product
             build_type: maven-pl
+            chart_dir: product
 
           - service: promotion
             source_dir: promotion
             image_name: yas-promotion
             build_type: maven-pl
+            chart_dir: promotion
 
           - service: rating
             source_dir: rating
             image_name: yas-rating
             build_type: maven-pl
+            chart_dir: rating
 
           - service: recommendation
             source_dir: recommendation
             image_name: yas-recommendation
             build_type: maven-pl
+            chart_dir: recommendation
 
           - service: sampledata
             source_dir: sampledata
             image_name: yas-sampledata
             build_type: maven-pl
+            chart_dir: sampledata
 
           - service: search
             source_dir: search
             image_name: yas-search
             build_type: maven-pl
+            chart_dir: search
 
           - service: storefront-bff
             source_dir: storefront-bff
             image_name: yas-storefront-bff
             build_type: maven-pl
+            chart_dir: storefront-bff
 
           - service: storefront-ui
             source_dir: storefront
             image_name: yas-storefront
             build_type: node
+            chart_dir: storefront-ui
 
           - service: tax
             source_dir: tax
             image_name: yas-tax
             build_type: maven-pl
+            chart_dir: tax
 
           - service: webhook
             source_dir: webhook
             image_name: yas-webhook
             build_type: maven-pl
+            chart_dir: webhook
 
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.MY_GITHUB_TOKEN }}
 
       - name: Decide whether to build this service
         id: decide
@@ -281,9 +302,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALUES_KEY="${{ matrix.source_dir }}"
+          CHART_DIR="${{ matrix.chart_dir }}"
+          VALUES_FILE="k8s/charts/${CHART_DIR}/values-dev.yaml"
           TAG="${{ steps.vars.outputs.short_sha }}"
-          export VALUES_KEY TAG
+          export TAG
 
           curl -fsSL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /tmp/yq
           chmod +x /tmp/yq
@@ -291,22 +313,49 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          update_tag() {
+            local file="$1"
+
+            if [ "$(/tmp/yq e 'has("backend") and (.backend | has("image")) and (.backend.image | has("tag"))' "$file")" = "true" ]; then
+              /tmp/yq -i '.backend.image.tag = strenv(TAG)' "$file"
+              return 0
+            fi
+
+            if [ "$(/tmp/yq e 'has("ui") and (.ui | has("image")) and (.ui.image | has("tag"))' "$file")" = "true" ]; then
+              /tmp/yq -i '.ui.image.tag = strenv(TAG)' "$file"
+              return 0
+            fi
+
+            if [ "$(/tmp/yq e 'has("image") and (.image | has("tag"))' "$file")" = "true" ]; then
+              /tmp/yq -i '.image.tag = strenv(TAG)' "$file"
+              return 0
+            fi
+
+            echo "::error::Cannot find image tag path in $file. Expected backend.image.tag, ui.image.tag, or image.tag"
+            return 1
+          }
+
           for attempt in 1 2 3; do
             git fetch origin main
             git reset --hard origin/main
 
-            /tmp/yq -i '.[strenv(VALUES_KEY)].image.tag = strenv(TAG)' "${{ env.VALUES_FILE }}"
-
-            if git diff --quiet -- "${{ env.VALUES_FILE }}"; then
-              echo "No values change for ${VALUES_KEY}"
+            if [ ! -f "$VALUES_FILE" ]; then
+              echo "::warning::Skip values update because $VALUES_FILE does not exist"
               exit 0
             fi
 
-            git add "${{ env.VALUES_FILE }}"
-            git commit -m "chore(cd): update ${VALUES_KEY} image tag to ${TAG} [skip ci]"
+            update_tag "$VALUES_FILE"
+
+            if git diff --quiet -- "$VALUES_FILE"; then
+              echo "No values change for ${CHART_DIR}; tag is already ${TAG}"
+              exit 0
+            fi
+
+            git add "$VALUES_FILE"
+            git commit -m "chore(cd): update ${CHART_DIR} image tag to ${TAG} [skip ci]"
 
             if git push origin HEAD:main; then
-              echo "Updated ${{ env.VALUES_FILE }} for ${VALUES_KEY} => ${TAG}"
+              echo "Updated $VALUES_FILE => $TAG"
               exit 0
             fi
 
