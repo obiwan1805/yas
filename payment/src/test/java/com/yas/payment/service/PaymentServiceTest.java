@@ -82,6 +82,35 @@ class PaymentServiceTest {
     }
 
     @Test
+    void initPayment_ShouldUseMatchingProviderHandler() {
+        PaymentHandler bankingHandler = mock(PaymentHandler.class);
+        when(paymentHandler.getProviderId()).thenReturn(PaymentMethod.PAYPAL.name());
+        when(bankingHandler.getProviderId()).thenReturn(PaymentMethod.BANKING.name());
+        paymentService = new PaymentService(paymentRepository, orderService, List.of(paymentHandler, bankingHandler));
+        paymentService.initializeProviders();
+
+        InitPaymentRequestVm requestVm = InitPaymentRequestVm.builder()
+                .paymentMethod(PaymentMethod.BANKING.name())
+                .checkoutId("checkout-banking")
+                .totalPrice(BigDecimal.TEN)
+                .build();
+        InitiatedPayment initiatedPayment = InitiatedPayment.builder()
+                .paymentId("banking-payment-id")
+                .status("success")
+                .redirectUrl("http://banking.example")
+                .build();
+        when(bankingHandler.initPayment(requestVm)).thenReturn(initiatedPayment);
+
+        InitPaymentResponseVm result = paymentService.initPayment(requestVm);
+
+        assertEquals("banking-payment-id", result.paymentId());
+        assertEquals("success", result.status());
+        assertEquals("http://banking.example", result.redirectUrl());
+        verify(bankingHandler, times(1)).initPayment(requestVm);
+        verify(paymentHandler, never()).initPayment(any());
+    }
+
+    @Test
     void capturePayment_Success() {
         CapturePaymentRequestVm capturePaymentRequestVM = CapturePaymentRequestVm.builder()
                 .paymentMethod(PaymentMethod.PAYPAL.name()).token("123").build();
@@ -136,7 +165,35 @@ class PaymentServiceTest {
 
         assertEquals(PaymentStatus.CANCELLED, result.paymentStatus());
         assertEquals("Gateway timeout", result.failureMessage());
-        }
+    }
+
+    @Test
+    void capturePayment_ShouldUpdateOrderStatusUsingSavedPaymentValues() {
+        CapturePaymentRequestVm capturePaymentRequestVm = CapturePaymentRequestVm.builder()
+                .paymentMethod(PaymentMethod.PAYPAL.name())
+                .token("123")
+                .build();
+        CapturedPayment capturedPayment = prepareCapturedPayment();
+        Long checkoutUpdatedOrderId = 999L;
+        Payment savedPayment = new Payment();
+        savedPayment.setId(88L);
+        savedPayment.setOrderId(checkoutUpdatedOrderId);
+        savedPayment.setPaymentStatus(PaymentStatus.CANCELLED);
+
+        when(paymentHandler.capturePayment(capturePaymentRequestVm)).thenReturn(capturedPayment);
+        when(orderService.updateCheckoutStatus(capturedPayment)).thenReturn(checkoutUpdatedOrderId);
+        when(paymentRepository.save(any())).thenReturn(savedPayment);
+
+        paymentService.capturePayment(capturePaymentRequestVm);
+
+        ArgumentCaptor<PaymentOrderStatusVm> orderStatusCaptor = ArgumentCaptor.forClass(PaymentOrderStatusVm.class);
+        verify(orderService, times(1)).updateOrderStatus(orderStatusCaptor.capture());
+        PaymentOrderStatusVm capturedOrderStatus = orderStatusCaptor.getValue();
+
+        assertEquals(savedPayment.getOrderId(), capturedOrderStatus.orderId());
+        assertEquals(savedPayment.getId(), capturedOrderStatus.paymentId());
+        assertEquals(savedPayment.getPaymentStatus().name(), capturedOrderStatus.paymentStatus());
+    }
 
     private CapturedPayment prepareCapturedPayment() {
         return CapturedPayment.builder()
