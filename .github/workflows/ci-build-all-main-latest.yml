@@ -39,11 +39,6 @@ jobs:
             image_name: yas-customer
             build_type: maven-pl
 
-          - service: delivery
-            source_dir: delivery
-            image_name: yas-delivery
-            build_type: maven-pl
-
           - service: inventory
             source_dir: inventory
             image_name: yas-inventory
