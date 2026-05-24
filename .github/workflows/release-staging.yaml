@@ -1,0 +1,233 @@
+name: release staging
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: obiwan1805
+  TARGET_BRANCH: main
+
+  # Sửa 2 path này theo vị trí GitOps/ArgoCD staging thật của repo nếu khác.
+  VALUES_FILE: k8s/values-staging.yaml
+  APPS_FILE: k8s/apps-staging.yaml
+
+jobs:
+  build-and-push-images:
+    name: Build and push ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: backoffice-bff
+            image: yas-backoffice-bff
+            build_type: java
+          - context: backoffice
+            image: yas-backoffice
+            build_type: node
+          - context: cart
+            image: yas-cart
+            build_type: java
+          - context: customer
+            image: yas-customer
+            build_type: java
+          - context: delivery
+            image: yas-delivery
+            build_type: java
+          - context: inventory
+            image: yas-inventory
+            build_type: java
+          - context: location
+            image: yas-location
+            build_type: java
+          - context: media
+            image: yas-media
+            build_type: java
+          - context: order
+            image: yas-order
+            build_type: java
+          - context: payment
+            image: yas-payment
+            build_type: java
+          - context: payment-paypal
+            image: yas-payment-paypal
+            build_type: java
+          - context: product
+            image: yas-product
+            build_type: java
+          - context: promotion
+            image: yas-promotion
+            build_type: java
+          - context: rating
+            image: yas-rating
+            build_type: java
+          - context: recommendation
+            image: yas-recommendation
+            build_type: java
+          - context: sampledata
+            image: yas-sampledata
+            build_type: java
+          - context: search
+            image: yas-search
+            build_type: java
+          - context: storefront-bff
+            image: yas-storefront-bff
+            build_type: java
+          - context: storefront
+            image: yas-storefront
+            build_type: node
+          - context: tax
+            image: yas-tax
+            build_type: java
+          - context: webhook
+            image: yas-webhook
+            build_type: java
+
+    steps:
+      - name: Checkout tag source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+
+      - name: Set up Java
+        if: ${{ matrix.build_type == 'java' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build Maven module
+        if: ${{ matrix.build_type == 'java' }}
+        run: mvn -B -DskipTests clean package -pl "${{ matrix.context }}" -am
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ env.VERSION }}
+
+  update-staging-gitops:
+    name: Update staging values and ArgoCD targetRevision
+    runs-on: ubuntu-latest
+    needs: build-and-push-images
+
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+
+      - name: Update values-staging.yaml and apps-staging.yaml
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          values_file = Path(os.environ["VALUES_FILE"])
+          apps_file = Path(os.environ["APPS_FILE"])
+
+          missing = [str(p) for p in (values_file, apps_file) if not p.exists()]
+          if missing:
+              sys.exit(
+                  "Missing file(s): "
+                  + ", ".join(missing)
+                  + ". Create them first or change VALUES_FILE/APPS_FILE in the workflow."
+              )
+
+          def update_image_tags(path: Path) -> None:
+              lines = path.read_text().splitlines(keepends=True)
+              output = []
+              image_indent = None
+              changed = 0
+
+              for line in lines:
+                  image_match = re.match(r"^(\s*)image:\s*(?:#.*)?$", line)
+                  if image_match:
+                      image_indent = len(image_match.group(1))
+                      output.append(line)
+                      continue
+
+                  if image_indent is not None:
+                      stripped = line.strip()
+                      current_indent = len(line) - len(line.lstrip(" "))
+
+                      if stripped and not stripped.startswith("#") and current_indent <= image_indent:
+                          image_indent = None
+
+                      if image_indent is not None and re.match(r"^\s*tag:\s*.*$", line):
+                          indent = re.match(r"^(\s*)", line).group(1)
+                          newline = "\n" if line.endswith("\n") else ""
+                          line = f"{indent}tag: {version}{newline}"
+                          changed += 1
+
+                  output.append(line)
+
+              if changed == 0:
+                  sys.exit(f"No image.tag entry found in {path}")
+
+              path.write_text("".join(output))
+              print(f"Updated {changed} image.tag entry/entries in {path}")
+
+          def update_target_revision(path: Path) -> None:
+              text = path.read_text()
+              new_text, changed = re.subn(
+                  r"^(\s*targetRevision:\s*).*$",
+                  lambda match: f"{match.group(1)}{version}",
+                  text,
+                  flags=re.MULTILINE,
+              )
+
+              if changed == 0:
+                  sys.exit(f"No targetRevision entry found in {path}")
+
+              path.write_text(new_text)
+              print(f"Updated {changed} targetRevision entry/entries in {path}")
+
+          update_image_tags(values_file)
+          update_target_revision(apps_file)
+          PY
+
+      - name: Commit and push staging config
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "$VALUES_FILE" "$APPS_FILE"
+          git commit -m "chore(staging): release ${VERSION}"
+          git push origin "HEAD:${TARGET_BRANCH}"
