@@ -11,6 +11,7 @@
 # fullnameOverride (e.g. cart → sa/cart, product → sa/product).
 #
 # Communication map:
+#   nginx-ingress  → storefront-bff, backoffice-bff, storefront-ui, backoffice-ui (port 80)
 #   storefront-ui  → storefront-bff
 #   storefront-bff → product, cart, customer, order, tax, search, media
 #   backoffice-ui  → backoffice-bff
@@ -28,9 +29,10 @@
 # ============================================================
 
 # ---- storefront-bff -----------------------------------------
-# Receives calls from: storefront-ui (server-side rendering)
-# Also receives traffic from nginx-ingress (port 80 is PERMISSIVE
-# via PeerAuthentication — see peer-authentication.yaml).
+# Receives calls from:
+#   storefront-ui (SSR)
+#   nginx-ingress → browser via storefront.dev.local.com (port 80)
+# Port 80 PERMISSIVE via peer-authentication.yaml for plain HTTP from ingress.
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -46,11 +48,19 @@ spec:
     - source:
         principals:
         - "cluster.local/ns/dev/sa/storefront-ui"
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/ingress-nginx/sa/ingress-nginx"
+  - to:
+    - operation:
+        ports: ["80"]
 
 ---
 # ---- backoffice-bff -----------------------------------------
-# Receives calls from: backoffice-ui (server-side rendering)
-# Also receives traffic from nginx-ingress (port 80 is PERMISSIVE).
+# Receives calls from:
+#   backoffice-ui (SSR)
+#   nginx-ingress → browser via api.backoffice-bff.dev.local.com (port 80)
 apiVersion: security.istio.io/v1beta1
 kind: AuthorizationPolicy
 metadata:
@@ -66,6 +76,57 @@ spec:
     - source:
         principals:
         - "cluster.local/ns/dev/sa/backoffice-ui"
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/ingress-nginx/sa/ingress-nginx"
+  - to:
+    - operation:
+        ports: ["80"]
+
+---
+# ---- storefront-ui ------------------------------------------
+# Browser via nginx-ingress when ingress is enabled (storefront-ui.dev.local.com).
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-storefront-ui
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storefront-ui
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/ingress-nginx/sa/ingress-nginx"
+  - to:
+    - operation:
+        ports: ["80"]
+
+---
+# ---- backoffice-ui ------------------------------------------
+# Browser via nginx-ingress (backoffice-ui.dev.local.com).
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-backoffice-ui
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backoffice-ui
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - "cluster.local/ns/ingress-nginx/sa/ingress-nginx"
+  - to:
+    - operation:
+        ports: ["80"]
 
 ---
 # ---- product ------------------------------------------------

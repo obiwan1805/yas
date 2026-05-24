@@ -274,11 +274,52 @@ istioctl authn tls-check ${POD}.dev
 
 ### T1 — Verify mTLS (all dev↔dev calls must be STRICT)
 
+**Prerequisites:** `istioctl` 1.21.x on your PATH (match the Istio control plane version).
+If `istioctl` is missing or reports `unknown command "authn"`, use the full binary path
+from the Istio bundle or skip to **Option B** below.
+
+```bash
+# Install istioctl once (Linux/macOS)
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.21.0 sh -
+export PATH=$HOME/istio-1.21.0/bin:$PATH
+istioctl version
+```
+
+**Option A — `istioctl authn tls-check` (preferred when available)**
+
 ```bash
 POD=$(kubectl get pod -n dev -l app.kubernetes.io/name=storefront-bff -o jsonpath='{.items[0].metadata.name}')
+# Use the bundled binary if another istioctl is on PATH:
+# ~/istio-1.21.0/bin/istioctl authn tls-check ${POD}.dev
 istioctl authn tls-check ${POD}.dev
 # Expected: STATUS=OK, MODE=STRICT for product.dev, cart.dev, etc.
 ```
+
+**Option B — Without `authn tls-check` (policy + sidecar + proxy-config)**
+
+```bash
+# 1) Confirm mTLS policies are applied
+kubectl get peerauthentication default -n dev -o jsonpath='{.spec.mtls.mode}{"\n"}'
+# Expected: STRICT
+
+kubectl get destinationrule mesh-wide-mtls -n dev -o jsonpath='{.spec.trafficPolicy.tls.mode}{"\n"}'
+# Expected: ISTIO_MUTUAL
+
+# 2) Confirm mesh pods have Envoy sidecars (2/2 READY)
+kubectl get pods -n dev -l 'app.kubernetes.io/name in (storefront-bff,product,cart)'
+
+# 3) Confirm workload certificates exist on the sidecar
+POD=$(kubectl get pod -n dev -l app.kubernetes.io/name=storefront-bff -o jsonpath='{.items[0].metadata.name}')
+istioctl proxy-config secret ${POD}.dev -n dev
+# Expected: entries for the workload identity and ROOTCA
+
+# 4) Optional: list outbound clusters to product
+istioctl proxy-config cluster ${POD}.dev -n dev | grep product
+```
+
+If `istioctl` is not installed at all, Options B steps 1–2 plus a successful **T2** curl
+through Envoy (`server: envoy`, no TLS handshake error) are sufficient evidence that
+intra-mesh mTLS is working.
 
 ### T2 — Allowed path (expect HTTP 200)
 
